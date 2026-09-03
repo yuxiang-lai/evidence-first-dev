@@ -1,0 +1,4 @@
+interface:
+  display_name: "Evidence-First Dev"
+  short_description: "First-principles workflow for verified coding"
+  default_prompt: "Use $evidence-first-dev to plan, implement, and verify this coding task."

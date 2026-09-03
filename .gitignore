@@ -1,0 +1,12 @@
+# Local and generated files
+node_modules/
+coverage/
+*.log
+*.tmp
+*.temp
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

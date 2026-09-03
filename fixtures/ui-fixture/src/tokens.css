@@ -1,0 +1,11 @@
+:root {
+  --color-page: #f5f7fa;
+  --color-panel: #ffffff;
+  --color-ink: #1f2933;
+  --color-muted: #66717d;
+  --color-accent: #146c94;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --radius-panel: 6px;
+}

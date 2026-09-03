@@ -1,0 +1,8 @@
+{
+  "name": "evidence-first-dev-ui-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

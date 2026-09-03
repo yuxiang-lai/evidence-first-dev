@@ -1,0 +1,9 @@
+{
+  "name": "evidence-first-dev-bug-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "reproduce": "node reproduce.mjs"
+  }
+}
