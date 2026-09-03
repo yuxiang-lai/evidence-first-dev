@@ -33,6 +33,14 @@ if (-not (Test-Path -LiteralPath $payloadManifest -PathType Leaf)) {
 $payloadEntries = Get-Content -LiteralPath $payloadManifest |
   Where-Object { $_.Trim() -and -not $_.Trim().StartsWith("#") }
 
+function Normalize-PayloadEntry([string]$Entry) {
+  $relative = $Entry.Trim().Replace("/", [char]92).TrimEnd([char]92, [char]47)
+  if ([System.IO.Path]::IsPathRooted($relative) -or $relative -match '(^|[\\])\.\.($|[\\])') {
+    Stop-Install "payload entry must stay inside the skill payload: $Entry"
+  }
+  return $relative
+}
+
 function Copy-Safely([string]$Source, [string]$Destination) {
   if (-not (Test-Path -LiteralPath $Source -PathType Leaf)) {
     Stop-Install "source file does not exist: $Source"
@@ -55,9 +63,9 @@ function Copy-Payload([string]$Destination, [switch]$AllowExisting) {
   if (-not $AllowExisting) { Assert-DestinationAvailable $Destination }
   New-Item -ItemType Directory -Force -Path $Destination | Out-Null
   foreach ($entry in $payloadEntries) {
-    $relative = $entry.Trim().Replace("/", [System.IO.Path]::DirectorySeparatorChar)
-    $source = Join-Path $skillRoot $relative.TrimEnd([char]92, [char]47)
-    $target = Join-Path $Destination $relative.TrimEnd([char]92, [char]47)
+    $relative = Normalize-PayloadEntry $entry
+    $source = Join-Path $skillRoot $relative
+    $target = Join-Path $Destination $relative
     if (Test-Path -LiteralPath $source -PathType Container) {
       New-Item -ItemType Directory -Force -Path $target | Out-Null
       Get-ChildItem -LiteralPath $source -Force | Copy-Item -Destination $target -Recurse -Force:$Force

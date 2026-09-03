@@ -175,7 +175,7 @@ Node.js or Python.
 | I use | Shortest path |
 | --- | --- |
 | Codex | Use the installer to copy the curated payload into `~/.codex/skills/evidence-first-dev` |
-| Cursor | Run `scripts/install.ps1 -Tool cursor`, or copy one `.mdc` file |
+| Cursor | Run `scripts/install.ps1 -Tool cursor -ProjectRoot <project-root>`, or copy one `.mdc` file |
 | Claude Code | Put the directory under `.claude/skills/evidence-first-dev/` |
 | Trae or CodeBuddy | Import the generic adapter into project rules or Custom Agent settings |
 | Other tools | Copy the root `AGENTS.md` into the target project root |

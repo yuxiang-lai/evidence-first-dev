@@ -17,14 +17,14 @@ for (const project of [cursorProject, genericProject, claudeProject, codexProjec
   fs.mkdirSync(project, { recursive: true });
 }
 
-function runInstall(tool, project, mode) {
+function runInstall(tool, project, mode, sourceRoot = skillRoot) {
   if (process.platform === "win32") {
     const args = [
       "-NoProfile",
       "-ExecutionPolicy",
       "Bypass",
       "-File",
-      path.join(scriptsDir, "install.ps1"),
+      path.join(sourceRoot, "scripts", "install.ps1"),
       "-Tool",
       tool,
       "-ProjectRoot",
@@ -34,7 +34,7 @@ function runInstall(tool, project, mode) {
     execFileSync("powershell.exe", args, { stdio: "ignore" });
     return;
   }
-  const args = [path.join(scriptsDir, "install.sh"), tool, project];
+  const args = [path.join(sourceRoot, "scripts", "install.sh"), tool, project];
   if (mode) args.push(mode);
   execFileSync("sh", args, {
     stdio: "ignore",
@@ -49,6 +49,7 @@ try {
   assert.ok(payloadEntries.includes("SKILL.md"));
   for (const entry of payloadEntries) {
     assert.ok(fs.existsSync(path.join(skillRoot, entry)), `payload entry must exist: ${entry}`);
+    assert.ok(!path.isAbsolute(entry) && !/(^|[\\/])\.\.($|[\\/])/.test(entry), `payload entry must stay inside the skill payload: ${entry}`);
   }
   for (const sourceOnly of ["AGENTS.md", "README.md", "README.en.md", "fixtures", "adapters", "scripts/install.ps1", "scripts/install.sh"]) {
     assert.ok(!payloadEntries.includes(sourceOnly), `${sourceOnly} must stay out of the runtime payload`);
@@ -79,6 +80,17 @@ try {
   runInstall("cursor", bridgeProject, "bridge");
   assert.ok(fs.existsSync(path.join(bridgeProject, ".cursor", "rules", "evidence-first-dev.mdc")));
   assert.ok(!fs.existsSync(path.join(bridgeProject, ".ai")));
+
+  const hostileSkillRoot = path.join(root, "hostile-skill");
+  const hostileScripts = path.join(hostileSkillRoot, "scripts");
+  const hostileTarget = path.join(root, "hostile target");
+  fs.mkdirSync(hostileScripts, { recursive: true });
+  fs.mkdirSync(hostileTarget, { recursive: true });
+  fs.copyFileSync(path.join(scriptsDir, "install.ps1"), path.join(hostileScripts, "install.ps1"));
+  fs.copyFileSync(path.join(scriptsDir, "install.sh"), path.join(hostileScripts, "install.sh"));
+  fs.writeFileSync(path.join(hostileScripts, "payload.txt"), "../escape.txt\n", "utf8");
+  assert.throws(() => runInstall("codex", hostileTarget, undefined, hostileSkillRoot));
+  assert.ok(!fs.existsSync(path.join(root, "escape.txt")), "installer must reject payload path traversal");
 
   assert.throws(() => runInstall("generic", genericProject));
   assert.throws(() => runInstall("generic", skillRoot));

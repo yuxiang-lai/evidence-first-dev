@@ -58,6 +58,11 @@ copy_payload() {
       ""|\#*) continue ;;
     esac
     entry=$(printf '%s' "$entry" | tr -d '\r')
+    case "$entry" in
+      /*|../*|*/../*|..|*/..|*'\\'*)
+        fail "payload entry must stay inside the skill payload: $entry"
+        ;;
+    esac
     source="$skill_root/$entry"
     target="$destination/${entry%/}"
     if [ -d "$source" ]; then

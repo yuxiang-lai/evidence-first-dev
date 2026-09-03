@@ -168,7 +168,7 @@ node <skill-path>/scripts/index.mjs resume <project-root>
 | 我使用 | 最短路径 |
 | --- | --- |
 | Codex | 用安装脚本复制精选 payload 到 `~/.codex/skills/evidence-first-dev` |
-| Cursor | 运行 `scripts/install.ps1 -Tool cursor`，或复制一个 `.mdc` |
+| Cursor | 运行 `scripts/install.ps1 -Tool cursor -ProjectRoot <project-root>`，或复制一个 `.mdc` |
 | Claude Code | 放入 `.claude/skills/evidence-first-dev/` |
 | Trae、CodeBuddy | 在项目规则或 Custom Agent 设置导入通用 adapter |
 | 其他工具 | 复制根目录 `AGENTS.md` 到目标项目根目录 |
