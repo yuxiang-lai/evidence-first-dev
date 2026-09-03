@@ -10,6 +10,7 @@
 - **Confirmation source**:
 - **Decision depth**: pending
 - **Contract required**: pending
+- **Evidence mode**: machine
 
 ## Problem
 

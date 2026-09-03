@@ -17,8 +17,11 @@ rules that do not protect a real risk.
 - Prefer machine-enforced invariants over repeated prose when a rule is a real
   completion gate.
 - Keep evidence schemas, templates, and validators synchronized.
-- If a required field, status meaning, evidence interpretation, or validator
-  gate changes, bump the relevant schema and add an explicit migration note.
+- If a required field, status meaning, machine evidence interpretation, or
+  validator gate changes, bump the relevant schema and add an explicit
+  migration note. An explicitly selected additive Portable evidence mode may
+  keep the ledger version when old ledgers retain their machine semantics and
+  the new evidence format has its own version.
 - Do not add dependencies when the Node.js standard library is sufficient.
 - Do not include real credentials, private paths, generated output, or project
   data in fixtures and examples.
@@ -32,6 +35,7 @@ node scripts/validate.test.mjs
 node scripts/validate.done.test.mjs
 node scripts/run-evidence.test.mjs
 node scripts/fixture-smoke.test.mjs
+node scripts/portable-mode.test.mjs
 python <path-to-skill-creator>/scripts/quick_validate.py .
 ```
 

@@ -2,7 +2,7 @@
 
 ## 中文
 
-Evidence-First Dev 的流程、模板和 Node.js 脚本是工具无关的。不同 AI
+Evidence-First Dev 的流程和模板是工具无关的，Node.js 脚本只是可选增强。不同 AI
 工具的差异主要在于：它们从哪个目录自动读取规则文件，以及是否支持
 `SKILL.md` 这种目录结构。
 
@@ -19,7 +19,8 @@ Evidence-First Dev 的流程、模板和 Node.js 脚本是工具无关的。不�
 | --- | --- | --- |
 | 流程规则 | `SKILL.md`、`references/` | 是 |
 | 环境即记忆 | `docs/CONTEXT.md`、`docs/WORKFLOW.md`、change ledger | 是 |
-| 证据与校验 | `scripts/`、`templates/`、`fixtures/` | 是，只需要 Node.js |
+| 证据与校验 | `templates/`、`references/portable-mode.md` | 是，不需要运行时 |
+| 自动化增强 | `scripts/` | 可选，只需要 Node.js 18+ |
 | 自动发现 | `agents/openai.yaml`、工具规则目录 | 否，由工具决定 |
 
 ### Codex
@@ -99,7 +100,7 @@ Copy-Item ".ai\evidence-first-dev\adapters\generic\AGENTS.md" ".\AGENTS.md"
 如果工具规则文件位于其他目录，只需要调整 adapter 中的路径，不要复制或
 改写完整的 `SKILL.md`。
 
-### 运行证据脚本
+### 运行证据脚本（可选）
 
 适配器只影响规则加载，脚本命令仍然相同：
 
@@ -110,12 +111,14 @@ node <skill-path>/scripts/validate.mjs <project-root> <change-id>
 ```
 
 项目中的 `docs/WORKFLOW.md`、`docs/CONTEXT.md` 和 change ledger 才是跨工具
-共享的环境记忆。无论使用哪个 AI，恢复都应从 `docs/WORKFLOW.md` 开始。
+共享的环境记忆。无论使用哪个 AI，恢复都应从 `docs/WORKFLOW.md` 开始。没有
+Node.js 时，使用 [Portable Markdown Mode](references/portable-mode.md)，手动
+维护恢复索引并记录 `manual-observed` 证据，不需要安装 Python 或其他运行时。
 
 ## English
 
-The workflow, templates, and Node.js helpers are tool-agnostic. Tool-specific
-integration is mostly a discovery problem: each agent looks for rules in a
+The workflow and templates are tool-agnostic. Node.js helpers are optional.
+Tool-specific integration is mostly a discovery problem: each agent looks for rules in a
 different location.
 
 `SKILL.md` is the single source of truth. Adapters are intentionally thin

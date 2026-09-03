@@ -12,7 +12,10 @@ const changeId = process.argv[3];
 const errors = [];
 const EVIDENCE_SCHEMA = "evidence-first-dev/command-evidence-v2";
 const EVIDENCE_PRODUCER = "run-evidence.mjs";
+const MANUAL_EVIDENCE_SCHEMA = "evidence-first-dev/manual-evidence-v1";
+const MANUAL_EVIDENCE_PRODUCER = "manual-observed";
 const FAILURE_CLASSES = new Set(["success", "non-zero-exit", "timeout", "output-limit", "spawn-failure", "signal"]);
+const EVIDENCE_MODES = new Set(["machine", "portable"]);
 const LEDGER_SCHEMA = "evidence-first-dev/change-ledger-v1";
 
 function read(name) {
@@ -53,15 +56,34 @@ function evidenceRecords(changeRoot) {
   const evidenceDir = path.join(changeRoot, "evidence");
   if (!fs.existsSync(evidenceDir)) return [];
   return fs.readdirSync(evidenceDir)
-    .filter((name) => name.endsWith(".json"))
+    .filter((name) => name.endsWith(".json") || name.endsWith(".md"))
     .map((name) => {
       try {
-        return JSON.parse(fs.readFileSync(path.join(evidenceDir, name), "utf8"));
+        const content = fs.readFileSync(path.join(evidenceDir, name), "utf8");
+        if (name.endsWith(".json")) return { kind: "machine", path: name, record: JSON.parse(content) };
+        const result = lineValue(content, "Result").match(/^exit[ \t]+(-?\d+)/i);
+        return {
+          kind: "manual",
+          path: name,
+          record: {
+            schema: lineValue(content, "Schema"),
+            producer: lineValue(content, "Producer"),
+            subject: lineValue(content, "Subject"),
+            command: lineValue(content, "Command").replace(/^`|`$/g, ""),
+            observedAt: lineValue(content, "Observed at"),
+            exitCode: result ? Number(result[1]) : null,
+            failureClass: lineValue(content, "Failure class").toLowerCase(),
+            observation: lineValue(content, "Observation"),
+            recorder: lineValue(content, "Recorded by"),
+            machineCapture: lineValue(content, "Machine capture"),
+            limitations: lineValue(content, "Limitations"),
+          },
+        };
       } catch {
-        return null;
+        return { kind: name.endsWith(".json") ? "machine" : "manual", path: name, record: null };
       }
     })
-    .filter(Boolean);
+    .filter((entry) => entry.record);
 }
 
 function isMachineEvidence(record, subject, successful = false) {
@@ -79,25 +101,59 @@ function isMachineEvidence(record, subject, successful = false) {
     && (!successful || record.exitCode === 0);
 }
 
-function hasEvidenceFor(changeRoot, subject, successful = false) {
-  return evidenceRecords(changeRoot).some((record) => isMachineEvidence(record, subject, successful));
+function isManualEvidence(record, subject, successful = false) {
+  const observedAt = Date.parse(record?.observedAt || "");
+  return record?.schema === MANUAL_EVIDENCE_SCHEMA
+    && record?.producer === MANUAL_EVIDENCE_PRODUCER
+    && record?.subject === subject
+    && meaningful(record?.command)
+    && Number.isInteger(record?.exitCode)
+    && FAILURE_CLASSES.has(record?.failureClass)
+    && Number.isFinite(observedAt)
+    && meaningful(record?.observation)
+    && meaningful(record?.recorder)
+    && /manual evidence|unavailable|not machine/i.test(record?.machineCapture || "")
+    && meaningful(record?.limitations)
+    && ((record.failureClass === "success" && record.exitCode === 0)
+      || (record.failureClass !== "success" && record.exitCode !== 0))
+    && (!successful || record.exitCode === 0);
 }
 
-function hasLinkedEvidence(changeRoot, progress, subject, successful = false) {
+function evidenceAllowed(entry, subject, successful, evidenceMode) {
+  if (entry.kind === "machine") return isMachineEvidence(entry.record, subject, successful);
+  return evidenceMode === "portable" && isManualEvidence(entry.record, subject, successful);
+}
+
+function linkedEvidenceAllowed(link, subject, successful, evidenceMode) {
+  if (!link.entry || !evidenceAllowed(link.entry, subject, successful, evidenceMode)) return false;
+  return link.entry.kind === "machine"
+    ? link.label === "machine evidence"
+    : link.label === "manual evidence";
+}
+
+function evidenceEntry(changeRoot, reference) {
+  const evidencePath = path.resolve(changeRoot, reference);
+  const changePrefix = `${changeRoot}${path.sep}`;
+  if (!evidencePath.startsWith(changePrefix) || !fs.existsSync(evidencePath)) return null;
+  const evidenceDir = path.join(changeRoot, "evidence");
+  const relativeEvidence = path.relative(evidenceDir, evidencePath).replaceAll("\\", "/");
+  return evidenceRecords(changeRoot).find((entry) => entry.path === relativeEvidence) || null;
+}
+
+function linkedEvidence(changeRoot, line) {
+  return [...line.matchAll(/\[((?:machine|manual) evidence)\]\((evidence\/[^)]+)\)/g)]
+    .map((match) => ({ label: match[1], reference: match[2], entry: evidenceEntry(changeRoot, match[2]) }));
+}
+
+function hasEvidenceFor(changeRoot, subject, successful = false, evidenceMode = "machine") {
+  return evidenceRecords(changeRoot).some((entry) => evidenceAllowed(entry, subject, successful, evidenceMode));
+}
+
+function hasLinkedEvidenceByMode(changeRoot, progress, subject, successful = false, evidenceMode = "machine") {
   return withoutFencedCode(progress).split(/\r?\n/).some((line) => {
     const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
     if (cells[1] !== subject) return false;
-    return [...line.matchAll(/\[machine evidence\]\((evidence\/[^)]+)\)/g)].some((match) => {
-      const evidencePath = path.resolve(changeRoot, match[1]);
-      const changePrefix = `${changeRoot}${path.sep}`;
-      if (!evidencePath.startsWith(changePrefix) || !fs.existsSync(evidencePath)) return false;
-      try {
-        const record = JSON.parse(fs.readFileSync(evidencePath, "utf8"));
-        return isMachineEvidence(record, subject, successful);
-      } catch {
-        return false;
-      }
-    });
+    return linkedEvidence(changeRoot, line).some((link) => linkedEvidenceAllowed(link, subject, successful, evidenceMode));
   });
 }
 
@@ -127,22 +183,13 @@ function reviewAcceptanceLine(review, subject) {
   return acceptanceSection(review).match(new RegExp(`^[ \\t]*-[ \\t]*${escaped}[ \\t]*:[ \\t]*(.+)$`, "mi"))?.[1]?.trim() || "";
 }
 
-function hasStandardAcceptanceFormat(reviewLine) {
-  return /^pass[ \t]*-[ \t]*command:[ \t]*.+?[ \t]*\|[ \t]*result:[ \t]*exit[ \t]+0[ \t]*\|[ \t]*evidence:[ \t]*\[machine evidence\]\(evidence\/[^)\r\n]+\)[ \t]*$/i.test(reviewLine);
+function hasStandardAcceptanceFormatByMode(reviewLine, evidenceMode = "machine") {
+  const label = evidenceMode === "portable" ? "(?:machine|manual)" : "machine";
+  return new RegExp(`^pass[ \\t]*-[ \\t]*command:[ \\t]*.+?[ \\t]*\\|[ \\t]*result:[ \\t]*exit[ \\t]+0[ \\t]*\\|[ \\t]*evidence:[ \\t]*\\[${label} evidence\\]\\(evidence/[^)\\r\\n]+\\)[ \\t]*$`, "i").test(reviewLine);
 }
 
-function hasReviewEvidence(changeRoot, reviewLine, subject) {
-  return [...reviewLine.matchAll(/\]\((evidence\/[^)]+)\)/g)].some((match) => {
-    const evidencePath = path.resolve(changeRoot, match[1]);
-    const changePrefix = `${changeRoot}${path.sep}`;
-    if (!evidencePath.startsWith(changePrefix) || !fs.existsSync(evidencePath)) return false;
-    try {
-      const record = JSON.parse(fs.readFileSync(evidencePath, "utf8"));
-      return isMachineEvidence(record, subject, true);
-    } catch {
-      return false;
-    }
-  });
+function hasReviewEvidenceByMode(changeRoot, reviewLine, subject, evidenceMode = "machine") {
+  return linkedEvidence(changeRoot, reviewLine).some((link) => linkedEvidenceAllowed(link, subject, true, evidenceMode));
 }
 
 function phaseNumber(phase) {
@@ -188,6 +235,7 @@ if (!errors.length) {
     const type = field(prd, "Type");
     const decisionDepth = field(prd, "Decision depth").toLowerCase();
     const contractRequired = field(prd, "Contract required").toLowerCase();
+    const evidenceMode = (field(progress, "Evidence mode") || field(prd, "Evidence mode") || "machine").toLowerCase();
     const prdLedgerSchema = field(prd, "Ledger schema");
     const progressLedgerSchema = field(progress, "Ledger schema");
 
@@ -199,8 +247,13 @@ if (!errors.length) {
     if (phase && !/^S[0-8]$/.test(phase)) errors.push("Phase must be S0 through S8");
     if (decisionDepth && !["pending", "minimal", "compare"].includes(decisionDepth)) errors.push("Decision depth must be pending, minimal, or compare");
     if (contractRequired && !["pending", "no", "yes"].includes(contractRequired)) errors.push("Contract required must be pending, no, or yes");
+    if (!EVIDENCE_MODES.has(evidenceMode)) errors.push("Evidence mode must be machine or portable");
     if (field(prd, "ID") !== changeId || field(progress, "Change") !== changeId) errors.push("change ID is inconsistent");
     if (field(prd, "Mode") !== mode || field(prd, "Risk") !== risk || field(prd, "Status") !== status) errors.push("PRD and PROGRESS metadata are inconsistent");
+    const prdEvidenceMode = field(prd, "Evidence mode");
+    const progressEvidenceMode = field(progress, "Evidence mode");
+    if ((prdEvidenceMode && !progressEvidenceMode) || (!prdEvidenceMode && progressEvidenceMode)) errors.push("PRD and PROGRESS must both declare Evidence mode");
+    if (prdEvidenceMode && progressEvidenceMode && prdEvidenceMode.toLowerCase() !== progressEvidenceMode.toLowerCase()) errors.push("PRD and PROGRESS Evidence mode are inconsistent");
     if (fs.existsSync(migrationPath) && phaseIndex >= 1) {
       const migration = fs.readFileSync(migrationPath, "utf8");
       if (field(migration, "Status").toLowerCase() !== "complete") errors.push("legacy migration must be complete before S1");
@@ -275,7 +328,7 @@ if (!errors.length) {
     const evidenceReferences = [...withoutFencedCode(progress).matchAll(/\]\((evidence\/[^)]+)\)/g)].map((match) => match[1]);
     for (const reference of evidenceReferences) {
       const evidencePath = path.resolve(changeRoot, reference);
-      if (!evidencePath.startsWith(`${changeRoot}${path.sep}`) || !fs.existsSync(evidencePath)) errors.push(`PROGRESS references missing machine evidence: ${reference}`);
+      if (!evidencePath.startsWith(`${changeRoot}${path.sep}`) || !fs.existsSync(evidencePath)) errors.push(`PROGRESS references missing evidence: ${reference}`);
     }
 
     const activeTasks = [...progress.matchAll(/^- \[>\]\s*T\d+/gim)].length;
@@ -327,13 +380,13 @@ if (!errors.length) {
     if (status === "done") {
       if (acceptanceRows.some((match) => match[5].toLowerCase() !== "pass")) errors.push("done requires every AC to be pass; pending, fail, or blocked is not complete");
       for (const id of ids) {
-        if (!hasLinkedEvidence(changeRoot, progress, id, true) && !hasEvidenceFor(changeRoot, id, true)) errors.push(`${id} needs a successful machine evidence reference in PROGRESS.md or evidence/`);
+        if (!hasLinkedEvidenceByMode(changeRoot, progress, id, true, evidenceMode) && !hasEvidenceFor(changeRoot, id, true, evidenceMode)) errors.push(`${id} needs a successful ${evidenceMode === "portable" ? "machine or manual" : "machine"} evidence reference in PROGRESS.md or evidence/`);
         const reviewLine = reviewAcceptanceLine(review, id);
-        if (!hasStandardAcceptanceFormat(reviewLine) || !hasReviewEvidence(changeRoot, reviewLine, id)) errors.push(`REVIEW.md needs an individual PASS in standard Command/Result/Evidence format with a valid evidence link for ${id}`);
+        if (!hasStandardAcceptanceFormatByMode(reviewLine, evidenceMode) || !hasReviewEvidenceByMode(changeRoot, reviewLine, id, evidenceMode)) errors.push(`REVIEW.md needs an individual PASS in standard Command/Result/Evidence format with a valid evidence link for ${id}`);
       }
       for (const check of importantChecks(review)) {
         if (!check.subjects.length) errors.push(`${check.id} must name an AC or task subject`);
-        for (const subject of check.subjects) if (!hasEvidenceFor(changeRoot, subject, true)) errors.push(`${check.id} requires successful run-evidence for ${subject}`);
+        for (const subject of check.subjects) if (!hasEvidenceFor(changeRoot, subject, true, evidenceMode)) errors.push(`${check.id} requires successful ${evidenceMode === "portable" ? "machine or manual evidence" : "run-evidence"} for ${subject}`);
       }
       if (planRows.some((match) => match[8].toLowerCase() !== "done")) errors.push("done requires every PLAN task to be done");
       if (!/^[-*] \*\*Status\*\*:\s*final\s*$/im.test(review)) errors.push("done requires REVIEW Status final");
@@ -358,7 +411,7 @@ if (!errors.length) {
     if (phaseIndex >= 7 && status !== "done") {
       for (const check of importantChecks(review)) {
         if (!check.subjects.length) errors.push(`${check.id} must name an AC or task subject`);
-        for (const subject of check.subjects) if (!hasEvidenceFor(changeRoot, subject)) errors.push(`${check.id} requires run-evidence for ${subject}`);
+        for (const subject of check.subjects) if (!hasEvidenceFor(changeRoot, subject, false, evidenceMode)) errors.push(`${check.id} requires ${evidenceMode === "portable" ? "machine or manual evidence" : "run-evidence"} for ${subject}`);
       }
     }
 

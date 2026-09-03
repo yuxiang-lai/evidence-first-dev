@@ -2,14 +2,17 @@
 
 > 面向 AI 编程代理的第一性原理、环境即记忆、证据优先、可恢复开发流程。
 
+中文 | [English](README.en.md)
+
 ## 中文
 
 Evidence-First Dev 不是一套让 AI “多写文档”的流程，而是让 AI 在写代码前
 先把问题想清楚，在写代码时控制复杂度，在结束任务前拿出真实证据，并且让
 下一次会话能够接着做。
 
-它以 Codex skill 形式提供，但核心流程使用普通 Markdown，验证脚本只依赖
-Node.js 标准库，也可以通过项目规则接入 Cursor、Claude Code、Windsurf、
+它以 Codex skill 形式提供，但核心流程使用普通 Markdown，不依赖 Node.js、
+Python 或目标项目的开发语言；可选的 Node.js 脚本只负责自动化护栏。它也可以
+通过项目规则接入 Cursor、Claude Code、Windsurf、
 Cline、Roo Code、GitHub Copilot、Gemini CLI 和 Aider。
 
 ## 核心思想
@@ -40,9 +43,10 @@ Cline、Roo Code、GitHub Copilot、Gemini CLI 和 Aider。
 
 ### 3. 证据优先
 
-“应该好了”“测试通过了”都不等于完成。重要命令由 `run-evidence.mjs` 真实
-执行，记录命令、参数、退出码、时间、输出摘要和证据文件；没有对应证据，
-就不能把任务标记为完成。
+“应该好了”“测试通过了”都不等于完成。有 Node.js 时，重要命令由
+`run-evidence.mjs` 真实执行，记录命令、参数、退出码、时间、输出摘要和证据
+文件；没有 Node.js 时，使用固定格式的 `manual-observed` Markdown 证据。无论
+哪种模式，没有对应证据就不能把任务标记为完成。
 
 **解决的问题**：让团队知道到底验证了什么、结果是什么，并且能够复查和复现，
 而不是相信 AI 的一句总结。
@@ -135,18 +139,27 @@ S0 观察并分类
 
 ## 新会话如何继续
 
-从项目根目录执行：
+从项目根目录开始：
 
 ```text
 node <skill-path>/scripts/index.mjs resume <project-root>
 ```
 
-它会刷新 `docs/WORKFLOW.md`，展示未完成和阻塞中的变更、当前任务、最后一次
-证明和下一步动作。存在多个未完成变更时必须明确选择，不能由 AI 猜测。
+有 Node.js 时，这条命令会刷新 `docs/WORKFLOW.md`，展示未完成和阻塞中的变更、
+当前任务、最后一次证明和下一步动作。没有 Node.js 时，直接读取并手动维护
+`docs/WORKFLOW.md`，操作步骤见 [Portable Markdown Mode](references/portable-mode.md)。
+存在多个未完成变更时必须明确选择，不能由 AI 猜测。
 
 ## 安装
 
-Codex：
+Codex（GitHub）：
+
+```bash
+git clone https://github.com/yuxiang-lai/evidence-first-dev.git \
+  ~/.codex/skills/evidence-first-dev
+```
+
+Gitee 镜像：
 
 ```bash
 git clone https://gitee.com/yuxiang-lai/evidence-first-dev.git \
@@ -163,7 +176,20 @@ git clone https://gitee.com/yuxiang-lai/evidence-first-dev `
 其他 AI 工具的接入方式见 [ADAPTERS.md](ADAPTERS.md)。适配器只负责引导工具
 读取唯一规范源 `SKILL.md`，不会复制第二份流程。
 
-需要 Node.js 18 或更高版本。skill 本身没有运行时第三方依赖。
+不安装 Node.js 也可以完整使用 Markdown 流程。安装 Node.js 18 或更高版本后，
+可以额外启用初始化、恢复索引同步、结构校验和机器证据采集；skill 本身没有
+运行时第三方依赖，也不要求目标项目使用 Node.js。
+
+### 两种运行模式
+
+| 模式 | 需要什么 | 证据方式 | 适合谁 |
+| --- | --- | --- | --- |
+| Portable Markdown | 只需要 AI 工具和文本文件 | `manual-observed` Markdown | 没有 Node.js，或希望流程完全跨语言、跨环境 |
+| Assisted | Node.js 18+ | `run-evidence.mjs` 机器采集 | 希望自动同步、校验和保留命令输出摘要 |
+
+两种模式共享同一套 Markdown 文档和状态协议。Node.js 是自动化适配器，不是
+目标项目的技术栈要求；不建议为了使用 C、C++、Java、Go、Rust 或 Python 项目
+而额外安装目标语言之外的运行时。
 
 ## 常用命令
 
@@ -184,9 +210,12 @@ evidence-first-dev/
 |-- adapters/                轻量规则桥接模板
 |-- references/              详细流程、审查和评估
 |-- templates/               环境即记忆的文档模板
-|-- scripts/                 恢复、证据和校验脚本
+|-- scripts/                 可选的 Node.js 恢复、证据和校验脚本
 `-- fixtures/                bug、UI、合约和恢复演练样本
 ```
+
+没有 Node.js 时重点使用 `SKILL.md`、`references/portable-mode.md`、
+`templates/` 和项目中的 `docs/`。脚本目录可以完全不执行。
 
 ## 适用边界
 
@@ -201,28 +230,15 @@ node scripts/validate.test.mjs
 node scripts/validate.done.test.mjs
 node scripts/run-evidence.test.mjs
 node scripts/fixture-smoke.test.mjs
+node scripts/portable-mode.test.mjs
 python <path-to-skill-creator>/scripts/quick_validate.py .
 ```
 
 详见 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [references/evals.md](references/evals.md)。
 
-## English Summary
+## English
 
-Evidence-First Dev is a portable, proportional, and resumable development
-workflow for coding agents. It is built around first-principles reasoning,
-repository-as-memory, real command evidence, minimum correct changes, TDD or
-reproduction-first debugging, prototype-before-production UI, explicit design
-trade-offs, one active task, and honest stopping.
-
-It addresses common agent failures: blindly implementing a user's proposed
-solution, stacking patches without finding the root cause, claiming completion
-without reproducible proof, losing context between sessions, and introducing
-UI or architectural complexity without evidence.
-
-The canonical rules live in `SKILL.md`. Markdown ledgers, templates, recovery
-scripts, evidence capture, validators, and fixture repositories are portable
-across agent tools. See [ADAPTERS.md](ADAPTERS.md) for Cursor, Claude Code,
-Windsurf, Cline, Roo Code, Copilot, Gemini CLI, and Aider integration.
+English documentation: [README.en.md](README.en.md).
 
 ## License
 

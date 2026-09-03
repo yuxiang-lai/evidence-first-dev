@@ -11,8 +11,9 @@ The initializer also creates two project-level files:
 - `docs/CONTEXT.md` is stable cross-change memory for repository identity,
   architecture, conventions, and verified commands.
 - `docs/WORKFLOW.md` is the single recovery entry. Its generated status block
-  is derived from each change's `PROGRESS.md` and `PRD.md`; do not edit that
-  block by hand.
+  is derived from each change's `PROGRESS.md` and `PRD.md` in machine index
+  mode. In portable index mode, update it by hand and keep every unfinished
+  change linked.
 
 Version markers identify the project context, workflow contract, change ledger,
 and command evidence formats. Missing markers may be repaired by
@@ -31,6 +32,7 @@ the only authoritative live status source for its change.
 
 - **ID**: <change-id>
 - **Ledger schema**: evidence-first-dev/change-ledger-v1
+- **Evidence mode**: machine | portable
 - **Type**: feature | bug | refactor | test | other
 - **Mode**: Fast | Full
 - **Risk**: low | high
@@ -205,11 +207,13 @@ that fact.
 This is the project's single recovery entry for non-trivial development.
 
 - **Workflow contract**: evidence-first-dev/workflow-v1
+- **Index mode**: machine | portable
 
 ## New-session protocol
 
-1. Run `node <skill>/scripts/index.mjs resume <project-root>`.
-2. Read this file and choose the one change to continue. If it reports
+1. Read this file. If Node.js is available, optionally run
+   `node <skill>/scripts/index.mjs resume <project-root>` first.
+2. Choose the one change to continue. If it reports
    `NEEDS-CHOICE`, do not silently select between unfinished changes.
 3. Read that change's `PROGRESS.md` first, then its `PRD.md`, `CONTEXT.md`,
    `DECISIONS.md`, `PLAN.md`, and relevant evidence or review.
@@ -329,6 +333,7 @@ implementation when the task's assumption or reproduction is not proven.
 
 - **Change**: <change-id>
 - **Ledger schema**: evidence-first-dev/change-ledger-v1
+- **Evidence mode**: machine | portable
 - **Mode**: Fast | Full
 - **Risk**: low | high
 - **Phase**: S0 | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8
@@ -350,9 +355,9 @@ implementation when the task's assumption or reproduction is not proven.
 | --- | --- | --- | --- | --- |
 | | | | | |
 
-Use `scripts/run-evidence.mjs` for every check listed as `IC-*` in `REVIEW.md`.
-It appends one row with `Task/AC`, the exact command, `exit <n>`, and one
-`[machine evidence](evidence/<generated-file>.json)` link. It stores
+In machine mode, use `scripts/run-evidence.mjs` for every check listed as
+`IC-*` in `REVIEW.md`. It appends one row with `Task/AC`, the exact command,
+`exit <n>`, and one `[machine evidence](evidence/<generated-file>.json)` link. It stores
 machine-captured command evidence under `evidence/` and records a bounded
 preview plus hashes in the ledger. The generated row is:
 
@@ -363,7 +368,9 @@ preview plus hashes in the ledger. The generated row is:
 Its `failureClass` is one of `success`, `non-zero-exit`, `timeout`,
 `output-limit`, `spawn-failure`, or `signal`. Do not hand-write a PASS row,
 invent an evidence filename, or run commands that print secrets. One row must
-describe one subject only.
+describe one subject only. In portable mode, create one `evidence/<subject>.md`
+file from `templates/EVIDENCE.md`, use `Producer: manual-observed`, and link it
+as `[manual evidence](evidence/<subject>.md)`.
 
 ## Handoff note
 
@@ -392,16 +399,17 @@ The required shape is:
 - AC-01: PASS - Command: npm test | Result: exit 0 | Evidence: [machine evidence](evidence/<generated-file>.json)
 ```
 
-The link must point to a v2 record produced by `run-evidence.mjs` for the same
-AC and must have `exitCode: 0` and `failureClass: success`. A summary line
-alone is not acceptance evidence.
+In machine mode, the link must point to a v2 record produced by
+`run-evidence.mjs` for the same AC and must have `exitCode: 0` and
+`failureClass: success`. In portable mode, it may point to a valid manual
+evidence file for the same AC. A summary line alone is not acceptance evidence.
 
 ## Important checks
 
 - none
-- Format: `IC-01: AC-01 or T01 | <important command>; run-evidence required`
-- Each `IC-*` subject must have a successful `run-evidence.mjs` record before
-  the change can be marked `done`.
+- Format: `IC-01: AC-01 or T01 | <important command>; evidence required`
+- Each `IC-*` subject must have successful evidence in the selected Evidence
+  mode before the change can be marked `done`.
 
 ## Standards axis
 

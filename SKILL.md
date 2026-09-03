@@ -75,6 +75,18 @@ Use the lightest entry that still protects the real risk:
   materially uncertain work. Add only the applicable research, contract,
   prototype, rollback, debt, and PR artifacts.
 
+Runtime independence is a design constraint:
+
+- The workflow, memory, templates, and manual evidence protocol require no
+  Node.js, Python, or project-specific runtime.
+- If Node.js 18+ is available, use the scripts as optional automation for
+  initialization, recovery-index sync, validation, and machine evidence.
+- If Node.js is unavailable, set `Evidence mode: portable` in both `PRD.md`
+  and `PROGRESS.md`, follow [references/portable-mode.md](references/portable-mode.md),
+  and use `templates/EVIDENCE.md` for honest manual observations.
+- Never claim that a manual observation is machine-captured, and never invent
+  a script result to satisfy a gate.
+
 ## When not to use this skill
 
 Do not use the ledger for a read-only explanation, prose-only edit, skill
@@ -93,9 +105,11 @@ older workflow skills for the same change after this ledger is selected.
 
 For every non-Micro task:
 
-1. Run `node <skill>/scripts/index.mjs resume <project-root>` and read
-   `docs/WORKFLOW.md`. This is the total entry for unfinished changes after a
-   new session. It refreshes the generated status block before reporting it.
+1. Read `docs/WORKFLOW.md`. This is the total entry for unfinished changes
+   after a new session. If Node.js is available, run
+   `node <skill>/scripts/index.mjs resume <project-root>` first to refresh the
+   generated status block. Without Node.js, follow the manual recovery steps in
+   [references/portable-mode.md](references/portable-mode.md).
 2. If there is exactly one active or blocked change, continue with it. If there
    are multiple unfinished changes, ask the user to choose a change ID; do not
    silently merge or prioritize them.
@@ -121,7 +135,9 @@ Use these terms consistently: `Confirmation` means alignment on the problem,
 scope, and acceptance; `Confirmation source` names the user, issue, or product
 authority that established that alignment; `Prototype approval` is the separate
 visual sign-off required before production UI code; `machine evidence` is a
-successful command record produced by `run-evidence.mjs`.
+successful command record produced by `run-evidence.mjs`; `manual evidence` is
+a fixed-format observation recorded when automation is unavailable. Both are
+evidence, but they have different provenance.
 
 ## Minimal end-to-end example
 
@@ -141,7 +157,8 @@ Request: "Fix the duplicate write that happens when the client retries."
 5. S6 runs only one active task at a time and records the focused result with:
    `node <skill>/scripts/run-evidence.mjs <root> <id> AC-01 -- npm test -- retry`.
 6. S7 reviews the diff, runs applicable standards checks, and records one
-   Acceptance line for `AC-01` with the evidence link. S8 sets `Status: done`
+   Acceptance line for `AC-01` with a machine or manual evidence link
+   appropriate to the selected mode. S8 sets `Status: done`
    only after every AC and task is proven, `REVIEW.md` is final, and
    `docs/WORKFLOW.md` is synchronized.
 
@@ -158,11 +175,17 @@ Memory has three explicit layers:
   generated section of `docs/WORKFLOW.md` indexes it but never overrides it.
 
 After changing phase, status, current task, blocker, next action, last proven
-state, or acceptance status, synchronize the recovery entry:
+state, or acceptance status, synchronize the recovery entry. With Node.js:
 
 ```text
 node <skill>/scripts/index.mjs sync <project-root>
 ```
+
+Without Node.js, update the status block in `docs/WORKFLOW.md` by hand. Keep
+one entry for every active or blocked change, including its ID, status, phase,
+current task, next action, blocker, last proven state, and `PROGRESS.md` link.
+The detailed `PROGRESS.md` remains authoritative; the workflow file only routes
+the next session.
 
 ## Alignment and first principles
 
@@ -303,8 +326,8 @@ passed" is not evidence. Record the command, exit code or key output, scope,
 and timestamp or commit when useful. A structural `validate.mjs` pass only
 proves the ledger shape; it never proves the software works.
 
-For important checks, use the evidence runner so the result cannot be confused
-with an unexecuted claim:
+For important checks, use the evidence runner when Node.js is available so the
+result cannot be confused with an unexecuted claim:
 
 ```text
 node <skill>/scripts/run-evidence.mjs <project-root> <change-id> <task-or-ac> -- <command>
@@ -327,6 +350,14 @@ use `--no-preview` when even redacted previews are not appropriate.
 Command evidence is versioned as `evidence-first-dev/command-evidence-v2`.
 When an old evidence schema is incompatible, rerun the command through the
 current runner instead of editing the old record.
+
+Without Node.js, run the real project command normally and record the result in
+`docs/changes/<id>/evidence/<subject>.md` using `templates/EVIDENCE.md`. Set
+`Producer: manual-observed`, `Schema: evidence-first-dev/manual-evidence-v1`,
+the actual exit code, failure class, observed time, concrete observation, and
+limitations. Link it as `[manual evidence](evidence/<subject>.md)`. Portable
+mode accepts successful machine or manual evidence; machine mode intentionally
+requires machine evidence for closeout and important checks.
 
 For non-trivial changes, read [references/review-checklist.md](references/review-checklist.md)
 before S7 and record only the relevant checks and explicit non-applicability.
@@ -379,7 +410,7 @@ Acceptance: PASS|FAIL|SKIP - <AC id and actual evidence, or concrete reason>
 
 Read [references/evals.md](references/evals.md) when changing this skill or
 checking whether it triggers and executes correctly. Use the structural
-validator for ledger invariants:
+validator for ledger invariants when Node.js is available:
 
 ```text
 node <skill>/scripts/validate.mjs <project-root> <change-id>
@@ -388,3 +419,7 @@ node <skill>/scripts/validate.mjs <project-root> <change-id>
 The validator is a guardrail, not an independent software evaluator. A good
 change still needs real project commands and, for subjective UI work, human
 review or a fresh-context comparison.
+
+Without Node.js, use the manual validation checklist in
+`references/portable-mode.md`. A skipped validator is not a passed project
+test; record `SKIP - Node.js unavailable` when reporting Standards.

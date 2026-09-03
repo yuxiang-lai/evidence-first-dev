@@ -8,14 +8,15 @@
 - AC-01: PASS - Command: `<exact command>` | Result: exit 0 | Evidence: [machine evidence](evidence/<generated-file>.json)
 
 List every AC on its own line using exactly `Command`, `Result`, and `Evidence`.
-A summary line alone is not acceptance evidence.
+In `portable` mode, use `[manual evidence](evidence/<id>.md)` and link the
+corresponding file. A summary line alone is not acceptance evidence.
 
 ## Important checks
 
 - none
-- Format: `IC-01: AC-01 or T01 | <important command>; run-evidence required`
-- Each `IC-*` subject must have a successful `run-evidence.mjs` record before
-  the change can be marked `done`.
+- Format: `IC-01: AC-01 or T01 | <important command>; evidence required`
+- Each `IC-*` subject must have successful evidence in the selected Evidence
+  mode before the change can be marked `done`.
 
 ## Standards axis
 

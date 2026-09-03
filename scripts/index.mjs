@@ -254,7 +254,11 @@ export function syncWorkflow(root) {
   const project = scanProject(root);
   const generated = renderGeneratedStatus(root, project);
   const current = readText(memory.workflowPath);
-  const next = replaceGeneratedBlock(current, generated);
+  const indexed = replaceGeneratedBlock(current, generated);
+  const indexMode = (field(current, "Index mode") || "machine").toLowerCase();
+  const next = /^- \*\*Index mode\*\*:/mi.test(indexed)
+    ? indexed.replace(/^(- \*\*Index mode\*\*:[ \t]*).*$/mi, `$1${indexMode}`)
+    : indexed.replace(/^(- \*\*Workflow contract\*\*:[^\r\n]*\r?\n)/mi, `$1- **Index mode**: ${indexMode}\n`);
   if (next !== current) fs.writeFileSync(memory.workflowPath, next, "utf8");
   return { ...memory, project, generated, changed: next !== current };
 }
@@ -275,14 +279,26 @@ export function checkWorkflow(root) {
     if (field(context, "Schema") !== PROJECT_CONTEXT_SCHEMA) errors.push(`docs/CONTEXT.md requires Schema ${PROJECT_CONTEXT_SCHEMA}`);
   }
   if (!fs.existsSync(workflowPath)) errors.push("missing docs/WORKFLOW.md recovery entry");
-  else if (field(readText(workflowPath), "Workflow contract") !== WORKFLOW_CONTRACT) errors.push(`docs/WORKFLOW.md requires Workflow contract ${WORKFLOW_CONTRACT}`);
+  else {
+    const workflow = readText(workflowPath);
+    const indexMode = (field(workflow, "Index mode") || "machine").toLowerCase();
+    if (field(workflow, "Workflow contract") !== WORKFLOW_CONTRACT) errors.push(`docs/WORKFLOW.md requires Workflow contract ${WORKFLOW_CONTRACT}`);
+    if (!["machine", "portable"].includes(indexMode)) errors.push("docs/WORKFLOW.md Index mode must be machine or portable");
+  }
   const project = scanProject(root);
   if (project.orphanDirectories.length) errors.push(`ledger directories without PROGRESS.md: ${project.orphanDirectories.join(", ")}`);
   if (fs.existsSync(workflowPath)) {
-    const actual = extractGeneratedBlock(readText(workflowPath));
+    const workflow = readText(workflowPath);
+    const indexMode = (field(workflow, "Index mode") || "machine").toLowerCase();
+    const actual = extractGeneratedBlock(workflow);
     const expected = renderGeneratedStatus(root, project);
     if (!actual) errors.push("docs/WORKFLOW.md has no generated status block");
-    else if (actual !== expected) errors.push("docs/WORKFLOW.md status is stale; run index.mjs sync");
+    else if (indexMode === "machine" && actual !== expected) errors.push("docs/WORKFLOW.md status is stale; run index.mjs sync");
+    else if (indexMode === "portable") {
+      for (const record of project.changes.filter((item) => ["active", "blocked"].includes(item.status))) {
+        if (!actual.includes(record.id) || !actual.includes(record.relativeProgress)) errors.push(`portable status index is missing unfinished change ${record.id} or its PROGRESS.md path`);
+      }
+    }
   }
   return { errors, project };
 }
