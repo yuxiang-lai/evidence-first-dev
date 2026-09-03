@@ -1,4 +1,117 @@
-# Evidence-First Dev
+# Evidence-First Dev / 证据优先开发
+
+> 面向 AI 编程代理的第一性原理、证据优先、可恢复开发流程。
+
+## 中文
+
+Evidence-First Dev 是一套适度、可追踪、可恢复的开发流程 skill。它帮助
+AI 编程代理先理解真实问题，再选择最小正确方案，持续把状态写回仓库，
+并且只有在真实证据充分时才结束任务。
+
+它以 Codex skill 形式提供，但流程记录使用普通 Markdown，验证脚本只依赖
+Node.js 标准库，方便阅读、审查、迁移和二次开发。
+
+### 它解决什么问题
+
+AI 很擅长生成代码补丁，但补丁本身不能证明问题被正确理解，也不能证明根因
+被解决。没有持久化状态时，新会话容易重复决策、丢失阻塞项，或者仅凭一段
+看起来合理的总结就宣布完成。
+
+这个 skill 把开发过程变成可以检查的事实记录：
+
+- 请求、事实、假设、决策、验收标准、任务和证据彼此分离。
+- 仓库就是记忆层，新会话可以从文件恢复，而不是依赖聊天上下文。
+- 校验器把关键完成条件程序化，降低对 AI 自觉性的依赖。
+
+### 核心思想
+
+1. **第一性原理**：用户提出的实现方式只是待验证假设。先还原参与者、
+   触发条件、可观察结果、不变量、责任边界、信任边界、失败代价和可逆性。
+2. **仓库即记忆**：`docs/CONTEXT.md` 保存稳定项目事实，`docs/WORKFLOW.md`
+   是新会话唯一恢复入口，`PROGRESS.md` 保存某个变更的权威实时状态。
+3. **证据优先**：不接受“测试通过”这种没有来源的总结。重要命令由
+   `run-evidence.mjs` 执行并记录命令、参数、退出码、时间、哈希和失败分类。
+4. **最小正确变更**：优先复用现有机制，避免补丁叠补丁、无依据的抽象和
+   不必要的依赖；同时不把正确性、安全性和必要体验伪装成“以后再做”。
+5. **TDD 与复现优先**：新行为遵循 red、green、refactor、verify；bug 先
+   复现，根因假设必须可证伪，回归测试应覆盖原始失败路径。
+6. **流程按风险分级**：低风险任务保持轻量，高风险任务才增加研究、回滚、
+   合约、债务和 PR 等治理记录。
+7. **界面先原型后生产代码**：先检查项目现有的 tokens、组件、字体、布局和
+   响应式规则，再产出原型；没有明确批准前不写生产 UI。
+8. **真实取舍显式比较**：存在价值、成本、风险或可逆性差异时提供 A/B 方案
+   横向对比并记录选择；机械小改动不制造虚假的备选方案。
+9. **单任务推进与诚实停止**：一个变更同时只能有一个 active task。复现不稳、
+   证据失败、审批缺失或假设未证实时，记录 blocker 和下一步实验，不继续堆补丁。
+
+### 完整流程
+
+```text
+S0 观察并分类
+ -> S1 对齐问题与验收标准
+ -> S2 建模不变量与失败代价
+ -> S3 比较方案或证明最小路径足够
+ -> S4 原型、公共合约或失败测试
+ -> S5 拆分计划并选择一个活动任务
+ -> S6 实现最小代码切片
+ -> S7 验证、评审并更新记忆
+ -> S8 完成、交接或恢复
+```
+
+### 流程分级
+
+- **Micro**：一个低风险、局部、可逆且只有一个明确验收条件的改动。默认不
+  创建 ledger。
+- **Fast**：一个服务内的多步骤或需要跨会话恢复的低风险改动，使用核心 ledger。
+- **Full**：数据迁移、权限、公共合约、不兼容变更、跨服务、生产关键路径、
+  不可逆操作或重大不确定性，增加适用的研究、回滚、债务和 PR 记录。
+
+### 新会话如何继续
+
+从项目根目录执行：
+
+```text
+node <skill>/scripts/index.mjs resume <project-root>
+```
+
+它会刷新 `docs/WORKFLOW.md`，展示未完成和阻塞中的变更、当前任务、最后一次
+证明和下一步动作。存在多个未完成变更时必须明确选择，不能由 AI 猜测。
+
+### 安装
+
+```bash
+git clone https://gitee.com/yuxiang-lai/evidence-first-dev.git \
+  ~/.codex/skills/evidence-first-dev
+```
+
+Windows PowerShell：
+
+```powershell
+git clone https://gitee.com/yuxiang-lai/evidence-first-dev `
+  "$HOME\.codex\skills\evidence-first-dev"
+```
+
+需要 Node.js 18 或更高版本。skill 本身没有运行时第三方依赖。
+
+### 常用命令
+
+```text
+node scripts/init.mjs <project-root> <YYYY-MM-DD-slug> <Fast|Full> <low|high> <type>
+node scripts/index.mjs resume <project-root>
+node scripts/index.mjs sync <project-root>
+node scripts/run-evidence.mjs <project-root> <change-id> <task-or-ac> -- <command> [args...]
+node scripts/validate.mjs <project-root> <change-id>
+```
+
+### 适用边界
+
+纯解释、纯文案修改、skill 编写任务和单行低风险可逆修改，不应强行套用完整
+ledger。结构校验器只能证明流程记录完整，不能替代软件正确性、视觉质量或
+不可篡改的证据签名。
+
+中文说明到此。English documentation follows.
+
+## English
 
 Evidence-First Dev is a proportional, resumable development workflow for
 coding agents. It helps an agent turn a request into the smallest correct
