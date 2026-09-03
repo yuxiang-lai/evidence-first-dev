@@ -93,6 +93,15 @@ git clone https://gitee.com/yuxiang-lai/evidence-first-dev `
 
 需要 Node.js 18 或更高版本。skill 本身没有运行时第三方依赖。
 
+### 跨工具接入
+
+流程规则、模板、环境即记忆和证据脚本可以被多个 AI 编程工具复用。
+Codex 可以原生加载；Cursor、Claude Code、Windsurf、Cline、Roo Code、
+Copilot、Gemini CLI 和 Aider 可以通过项目规则文件接入。适配器只负责
+引导工具读取唯一规范源 `SKILL.md`，不会复制第二份流程。
+
+详见 [ADAPTERS.md](ADAPTERS.md)。
+
 ### 常用命令
 
 ```text
@@ -254,6 +263,11 @@ git clone https://gitee.com/yuxiang-lai/evidence-first-dev `
 
 The skill has no runtime package dependencies. Node.js 18 or newer is
 recommended for the helper scripts.
+
+Tool integration is documented in [ADAPTERS.md](ADAPTERS.md). Codex can load
+it natively; Cursor, Claude Code, Windsurf, Cline, Roo Code, Copilot, Gemini
+CLI, and Aider can use thin project-rule bridges to the same canonical
+`SKILL.md` instead of maintaining a separate workflow copy.
 
 ## Commands
 

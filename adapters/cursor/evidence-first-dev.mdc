@@ -1,0 +1,22 @@
+---
+description: Evidence-first, resumable workflow for non-trivial coding changes
+globs:
+alwaysApply: true
+---
+
+For a non-trivial coding change, read and follow the canonical workflow at
+`.cursor/evidence-first-dev/SKILL.md` before planning or editing.
+
+Keep the process proportional:
+
+- Skip the full ledger for read-only explanations, prose-only edits, and tiny
+  reversible changes.
+- For real changes, use first-principles problem reduction, evidence-backed
+  decisions, TDD or reproduction-first debugging, one active task, and the
+  repository memory under `docs/`.
+- For UI changes, inspect the existing visual language and obtain prototype
+  approval before production UI implementation.
+- Do not mark work complete from a plan, summary, or unverified command claim.
+
+The root `SKILL.md` is the only source of workflow rules. Do not create a
+second copy of its instructions in Cursor rules.
