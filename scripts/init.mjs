@@ -69,6 +69,14 @@ const files = [...(mode === "Full" ? fullFiles : coreFiles)];
 if (migrate) files.push("MIGRATION.md");
 
 const legacyChangePath = path.join(changeRoot, "CHANGE.md");
+if (allowResume) {
+  if (!fs.existsSync(changeRoot) || !fs.statSync(changeRoot).isDirectory()) {
+    fail(`--resume requires an existing change directory: ${changeRoot}`);
+  }
+  for (const name of ["PRD.md", "PROGRESS.md"]) {
+    if (!fs.existsSync(path.join(changeRoot, name))) fail(`--resume requires an existing ${name}`);
+  }
+}
 if (migrate) {
   if (!fs.existsSync(changeRoot) || !fs.existsSync(legacyChangePath)) {
     fail("--migrate requires an existing dev-workflow CHANGE.md");

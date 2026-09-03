@@ -20,9 +20,16 @@ if (!fs.existsSync(projectRoot) || !fs.statSync(projectRoot).isDirectory()) {
 
 const candidates = [
   ["Cursor rule", ".cursor/rules/evidence-first-dev.mdc"],
+  ["Cursor legacy skill", ".cursor/evidence-first-dev/SKILL.md"],
   ["Portable project rule", "AGENTS.md"],
   ["Claude Code skill", ".claude/skills/evidence-first-dev/SKILL.md"],
   ["Local skill checkout", ".ai/evidence-first-dev/SKILL.md"],
+  ["Windsurf rule", ".windsurf/rules/evidence-first-dev.md"],
+  ["Cline rule", ".clinerules/evidence-first-dev.md"],
+  ["Roo Code rule", ".roo/rules/evidence-first-dev.md"],
+  ["GitHub Copilot instructions", ".github/copilot-instructions.md"],
+  ["Gemini CLI instructions", "GEMINI.md"],
+  ["Aider conventions", "CONVENTIONS.md"],
 ];
 
 function isEvidenceEntry(relative) {

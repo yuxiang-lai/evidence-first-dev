@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Focused checks for argument passing and evidence capture boundaries. */
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -35,12 +36,25 @@ try {
   let evidenceFiles = fs.readdirSync(path.join(projectRoot, "docs", "changes", changeId, "evidence"));
   assert.equal(evidenceFiles.length, 1);
   let evidence = JSON.parse(fs.readFileSync(path.join(projectRoot, "docs", "changes", changeId, "evidence", evidenceFiles[0]), "utf8"));
-  assert.equal(evidence.schema, "evidence-first-dev/command-evidence-v2");
+  assert.equal(evidence.schema, "evidence-first-dev/command-evidence-v3");
   assert.equal(evidence.producer, "run-evidence.mjs");
   assert.equal(evidence.failureClass, "success");
   assert.equal(evidence.executable, process.execPath);
   assert.deepEqual(evidence.args.slice(0, 2), ["-e", "process.stdout.write('token=[REDACTED]')"]);
   assert.match(evidence.stdoutPreview, /token=\[REDACTED\]/);
+  assert.equal(evidence.redaction, "applied-before-preview-and-hash");
+
+  result = run(runnerPath, [projectRoot, changeId, "T-secret-json", "--", process.execPath, "-e", "process.stdout.write(JSON.stringify({api_key: 'json-secret', password: 'json-secret'}))"]);
+  assert.equal(result.status, 0, result.stderr);
+  evidence = evidenceFor("T-secret-json");
+  assert.doesNotMatch(evidence.stdoutPreview, /json-secret/);
+  assert.equal(evidence.stdoutSha256, crypto.createHash("sha256").update('{"api_key":[REDACTED],"password":[REDACTED]}', "utf8").digest("hex"));
+
+  result = run(runnerPath, [projectRoot, changeId, "T-secret-cli", "--", process.execPath, "-e", "process.stdout.write('ok')", "--", "--password", "cli-secret"]);
+  assert.equal(result.status, 0, result.stderr);
+  evidence = evidenceFor("T-secret-cli");
+  assert.deepEqual(evidence.args.slice(-2), ["--password", "[REDACTED]"]);
+  assert.doesNotMatch(evidence.command, /cli-secret/);
 
   result = run(runnerPath, [projectRoot, changeId, "T01", "--no-preview", "--", process.execPath, "-e", "process.stdout.write('secret=do-not-store')"]);
   assert.equal(result.status, 0, result.stderr);

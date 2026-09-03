@@ -32,6 +32,10 @@ Cline、Roo Code、GitHub Copilot、Gemini CLI 和 Aider。
 **解决的问题**：换会话、换 AI 或隔几天回来时，不会丢失上下文、重复分析，
 也不会不知道上次卡在哪里。
 
+它也不会把入口文件当成日志：`CONTEXT.md` 只保留当前事实，`WORKFLOW.md`
+只索引未完成项和最近完成项，`DEBTS.md` 只保留未偿还债务；单个 change ledger
+才保存完整历史。
+
 ### 2. 第一性原理
 
 用户说“加缓存”“重构这里”或“加一个页面”，只是解决方案建议，不一定是
@@ -150,6 +154,12 @@ node <skill-path>/scripts/index.mjs resume <project-root>
 `docs/WORKFLOW.md`，操作步骤见 [Portable Markdown Mode](references/portable-mode.md)。
 存在多个未完成变更时必须明确选择，不能由 AI 猜测。
 
+项目级记忆不会把完整历史不断复制到入口：`WORKFLOW.md` 只保留未完成项和最近
+10 个已完成变更，`CONTEXT.md` 的更新历史最多 5 条，`DEBTS.md` 只保留未偿还债务。
+完整记录留在对应的 `docs/changes/<id>/` 下；有 Node.js 时可运行
+`node <skill-path>/scripts/index.mjs check <project-root>` 检查入口是否超限，
+详见 [记忆保留与压缩](references/retention.md)。
+
 ## 安装
 
 希望快速接入时，直接阅读 [安装与接入](INSTALL.md)。按你的 AI 工具选择一条
@@ -157,36 +167,53 @@ node <skill-path>/scripts/index.mjs resume <project-root>
 
 | 我使用 | 最短路径 |
 | --- | --- |
-| Codex | 克隆到 `~/.codex/skills/evidence-first-dev` |
+| Codex | 用安装脚本复制精选 payload 到 `~/.codex/skills/evidence-first-dev` |
 | Cursor | 运行 `scripts/install.ps1 -Tool cursor`，或复制一个 `.mdc` |
 | Claude Code | 放入 `.claude/skills/evidence-first-dev/` |
 | Trae、CodeBuddy | 在项目规则或 Custom Agent 设置导入通用 adapter |
 | 其他工具 | 复制根目录 `AGENTS.md` 到目标项目根目录 |
 | 不使用 Git | 在 GitHub/Gitee 点击 `Download ZIP` |
 
-Codex（GitHub）：
+Codex 用户安装（只复制运行所需文件）：
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME\.codex\skills\evidence-first-dev" | Out-Null
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -Tool codex -ProjectRoot "$HOME\.codex\skills\evidence-first-dev"
+```
+
+macOS/Linux：
+
+```bash
+mkdir -p ~/.codex/skills/evidence-first-dev
+sh scripts/install.sh codex ~/.codex/skills/evidence-first-dev
+```
+
+贡献者或需要修改 skill 源码时，再使用完整 checkout：
 
 ```bash
 git clone https://github.com/yuxiang-lai/evidence-first-dev.git \
-  ~/.codex/skills/evidence-first-dev
+  ~/src/evidence-first-dev
 ```
 
 Gitee 镜像：
 
 ```bash
 git clone https://gitee.com/yuxiang-lai/evidence-first-dev.git \
-  ~/.codex/skills/evidence-first-dev
+  ~/src/evidence-first-dev
 ```
 
 Windows PowerShell：
 
 ```powershell
 git clone https://gitee.com/yuxiang-lai/evidence-first-dev `
-  "$HOME\.codex\skills\evidence-first-dev"
+  "$HOME\src\evidence-first-dev"
 ```
 
 其他 AI 工具的接入方式见 [INSTALL.md](INSTALL.md) 和 [ADAPTERS.md](ADAPTERS.md)。
 根目录 `AGENTS.md` 和适配器只提供轻量桥接；完整流程仍以 `SKILL.md` 为规范源。
+安装脚本使用 `scripts/payload.txt`，不会把 README、fixtures、测试、适配器和开发用
+安装器复制进目标 skill 目录。
 
 不安装 Node.js 也可以完整使用 Markdown 流程。安装 Node.js 18 或更高版本后，
 可以额外启用初始化、恢复索引同步、结构校验和机器证据采集；skill 本身没有

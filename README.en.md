@@ -33,6 +33,10 @@ actions are written back to the repository.
 This prevents context loss, repeated analysis, and uncertainty about where the
 previous session stopped.
 
+The entry files are not session logs: `CONTEXT.md` keeps current facts,
+`WORKFLOW.md` indexes unfinished work and recent completions, and `DEBTS.md`
+keeps open debt. The individual change ledger retains the full history.
+
 ### 2. First-principles reasoning
 
 "Add a cache", "refactor this", or "build a page" is a proposed solution, not
@@ -155,6 +159,13 @@ changing phase, status, task, blocker, last proven state, next action, or
 acceptance. If multiple changes are unfinished, ask the user to choose a change
 ID instead of guessing.
 
+Project memory does not copy the full history into the entry point forever:
+`WORKFLOW.md` keeps every unfinished change and the 10 newest completed changes,
+`CONTEXT.md` keeps at most 5 update-history rows, and `DEBTS.md` keeps unpaid
+debt only. Full records stay under `docs/changes/<id>/`. With Node.js, run
+`node <skill-path>/scripts/index.mjs check <project-root>` to check the bounds;
+see [Memory Retention And Compaction](references/retention.md).
+
 ## Installation
 
 For the shortest path, read [INSTALL.md](INSTALL.md). Choose your AI tool and
@@ -163,18 +174,33 @@ Node.js or Python.
 
 | I use | Shortest path |
 | --- | --- |
-| Codex | Clone into `~/.codex/skills/evidence-first-dev` |
+| Codex | Use the installer to copy the curated payload into `~/.codex/skills/evidence-first-dev` |
 | Cursor | Run `scripts/install.ps1 -Tool cursor`, or copy one `.mdc` file |
 | Claude Code | Put the directory under `.claude/skills/evidence-first-dev/` |
 | Trae or CodeBuddy | Import the generic adapter into project rules or Custom Agent settings |
 | Other tools | Copy the root `AGENTS.md` into the target project root |
 | No Git | Use `Download ZIP` on GitHub or Gitee |
 
-Codex:
+Codex user installation (runtime payload only):
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME\.codex\skills\evidence-first-dev" | Out-Null
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -Tool codex -ProjectRoot "$HOME\.codex\skills\evidence-first-dev"
+```
+
+macOS/Linux:
+
+```bash
+mkdir -p ~/.codex/skills/evidence-first-dev
+sh scripts/install.sh codex ~/.codex/skills/evidence-first-dev
+```
+
+For contributing or editing the skill source, use a full checkout instead:
 
 ```bash
 git clone https://github.com/yuxiang-lai/evidence-first-dev.git \
-  ~/.codex/skills/evidence-first-dev
+  ~/src/evidence-first-dev
 ```
 
 Windows PowerShell:
@@ -187,7 +213,9 @@ git clone https://github.com/yuxiang-lai/evidence-first-dev `
 For Cursor, Claude Code, Windsurf, Cline, Roo Code, Copilot, Gemini CLI, and
 Aider, see [INSTALL.md](INSTALL.md) and [ADAPTERS.md](ADAPTERS.md). The root
 `AGENTS.md` and adapters are thin bridges; `SKILL.md` remains the detailed
-workflow source of truth.
+workflow source of truth. The installer reads `scripts/payload.txt`, so user
+installation does not copy README files, fixtures, tests, adapters, or installer
+source into the target skill directory.
 
 ## Optional Commands
 

@@ -55,6 +55,18 @@ change. Keep transient work state in `docs/WORKFLOW.md` and the change ledger.
 - Run the workflow index sync after changing phase, status, current task,
   blocker, next action, or last proven state.
 
+## Retention and compaction
+
+- Keep this file as current-state memory, not a session diary.
+- Update an existing fact when it changes; do not append a second row for the
+  same fact just to preserve an old value.
+- Keep `Update history` to the latest five meaningful project-wide changes.
+  Move older history to an explicitly named archive such as
+  `docs/archive/PROJECT-CONTEXT-history.md` only when it is needed. Never move
+  an active or blocked change.
+- Keep change-specific facts, experiments, and historical rationale in the
+  change ledger instead of copying them here.
+
 ## Stable project decisions
 
 Append durable repository-wide decisions here only when they apply to more than

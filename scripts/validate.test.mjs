@@ -34,6 +34,35 @@ try {
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, new RegExp(`RESUME READY: ${id}`));
 
+  const missingResumeId = "2026-09-03-missing-resume";
+  result = run(initPath, [projectRoot, missingResumeId, "Fast", "low", "feature", "--resume"]);
+  assert.equal(result.status, 1, "--resume must not create a missing change");
+  assert.match(result.stderr, /requires an existing change directory/);
+  assert.ok(!fs.existsSync(path.join(projectRoot, "docs", "changes", missingResumeId)));
+
+  const initialProgress = fs.readFileSync(path.join(projectRoot, "docs", "changes", id, "PROGRESS.md"), "utf8");
+  fs.writeFileSync(path.join(projectRoot, "docs", "changes", id, "PROGRESS.md"), initialProgress.replace("- **Status**: active", "- **Status**: corrupted"), "utf8");
+  result = run(indexPath, ["resume", projectRoot]);
+  assert.equal(result.status, 1, "resume must reject an invalid ledger status");
+  assert.match(result.stderr, /RESUME NEEDS-REPAIR/);
+  fs.writeFileSync(path.join(projectRoot, "docs", "changes", id, "PROGRESS.md"), initialProgress, "utf8");
+
+  const initialPrd = fs.readFileSync(path.join(projectRoot, "docs", "changes", id, "PRD.md"), "utf8");
+  fs.writeFileSync(path.join(projectRoot, "docs", "changes", id, "PRD.md"), initialPrd.replace("evidence-first-dev/change-ledger-v1", "evidence-first-dev/change-ledger-v999"), "utf8");
+  result = run(indexPath, ["resume", projectRoot]);
+  assert.equal(result.status, 1, "resume must reject an incompatible ledger schema");
+  assert.match(result.stderr, /Ledger schema is missing or unsupported/);
+  fs.writeFileSync(path.join(projectRoot, "docs", "changes", id, "PRD.md"), initialPrd, "utf8");
+
+  const orphanPath = path.join(projectRoot, "docs", "changes", "2026-09-03-orphan");
+  fs.mkdirSync(orphanPath, { recursive: true });
+  result = run(indexPath, ["resume", projectRoot]);
+  assert.equal(result.status, 1, "resume must reject an orphan ledger directory");
+  assert.match(result.stderr, /no PROGRESS\.md/);
+  fs.rmSync(orphanPath, { recursive: true, force: true });
+  result = run(indexPath, ["sync", projectRoot]);
+  assert.equal(result.status, 0, result.stderr);
+
   result = run(validatePath, [projectRoot, id]);
   assert.equal(result.status, 1, "empty acceptance must fail validation");
 

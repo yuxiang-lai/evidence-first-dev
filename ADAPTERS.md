@@ -27,7 +27,18 @@ Evidence-First Dev 的流程和模板是工具无关的，Node.js 脚本只是�
 
 ### Codex
 
-Codex 可以原生使用本仓库：
+Codex 用户安装时建议使用精选 payload，而不是把源码仓库直接放进 skill 目录：
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME\.codex\skills\evidence-first-dev" | Out-Null
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -Tool codex -ProjectRoot "$HOME\.codex\skills\evidence-first-dev"
+```
+
+贡献者才需要完整 checkout。安装器不会复制 README、fixtures、测试、适配器和
+开发用安装器。
+
+Codex 可以原生使用安装后的 payload：
 
 ```text
 ~/.codex/skills/evidence-first-dev/SKILL.md
@@ -52,13 +63,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
 
 ### Claude Code
 
-如果当前版本支持 Agent Skills，可以直接把整个目录放入：
+如果当前版本支持 Agent Skills，建议用安装器复制精选 payload：
 
 ```text
 .claude/skills/evidence-first-dev/
 ```
 
-保留根目录 `SKILL.md`，忽略 `agents/openai.yaml` 即可。如果当前版本不
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -Tool claude -ProjectRoot C:\path\to\your-project
+```
+
+手动安装时只复制 payload 清单中的文件，忽略 `agents/openai.yaml` 即可。如果当前版本不
 支持目录式 skill，把 [generic adapter](adapters/generic/AGENTS.md) 的内容
 放到项目规则文件中，并把其中的路径改成实际 clone 路径。
 
@@ -103,9 +119,18 @@ Custom Agent 设置为准。仓库不猜测一个可能随版本变化的固定�
 
 ```powershell
 New-Item -ItemType Directory -Force .ai | Out-Null
-git clone https://gitee.com/yuxiang-lai/evidence-first-dev.git `
-  ".ai\evidence-first-dev"
-Copy-Item ".ai\evidence-first-dev\adapters\generic\AGENTS.md" ".\AGENTS.md"
+New-Item -ItemType Directory -Force ".ai\evidence-first-dev" | Out-Null
+Copy-Item "<skill-root>\SKILL.md" ".ai\evidence-first-dev\SKILL.md"
+Copy-Item "<skill-root>\references" ".ai\evidence-first-dev\references" -Recurse
+Copy-Item "<skill-root>\templates" ".ai\evidence-first-dev\templates" -Recurse
+Copy-Item "<skill-root>\AGENTS.md" ".\AGENTS.md"
+```
+
+更推荐运行安装器，因为它会按 `scripts/payload.txt` 保持清单一致：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File <skill-root>\scripts\install.ps1 `
+  -Tool generic -ProjectRoot <project-root>
 ```
 
 如果工具规则文件位于其他目录，只需要把通用 adapter 放入该入口，不要复制

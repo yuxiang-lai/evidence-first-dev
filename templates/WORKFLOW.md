@@ -32,6 +32,10 @@ This is the project's single recovery entry for non-trivial development.
   link to every active or blocked `PROGRESS.md`. In `machine` mode, run
   `node <skill>/scripts/index.mjs sync <project-root>` and never edit it by hand.
 
+The generated status block contains every active or blocked change and only
+the ten most recent completed changes. Older completed ledgers remain in
+`docs/changes/` but are not copied into this recovery entry.
+
 ## Project commands and conventions
 
 Maintain stable project-wide commands and conventions in `docs/CONTEXT.md`.

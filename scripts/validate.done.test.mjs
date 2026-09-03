@@ -30,6 +30,7 @@ try {
   const changeRoot = path.join(projectRoot, "docs", "changes", changeId);
 
   let prd = fs.readFileSync(path.join(changeRoot, "PRD.md"), "utf8");
+  const commandText = `${process.execPath} --version`;
   prd = setBullet(prd, "Confirmation", "confirmed");
   prd = setBullet(prd, "Confirmation source", "done-state test");
   prd = setBullet(prd, "Status", "done");
@@ -37,7 +38,7 @@ try {
   prd = setBullet(prd, "Contract required", "no");
   prd = prd.replace("### Observed facts\n-", "### Observed facts\n- The local behavior is deterministic and testable.")
     .replace("### Goal\n-", "### Goal\n- Verify done requires individual successful evidence.")
-    .replace("| AC-01 | | | | pending |", "| AC-01 | Given the command is available, when it runs, then it exits successfully | node --version | exit code 0 | pass |");
+    .replace("| AC-01 | | | | pending |", `| AC-01 | Given the command is available, when it runs, then it exits successfully | ${commandText} | exit code 0 | pass |`);
   for (const [label, value] of [
     ["Beneficiary", "maintainers"],
     ["Problem cost", "false done claims"],
@@ -72,7 +73,7 @@ try {
   fs.writeFileSync(path.join(changeRoot, "CONTEXT.md"), fs.readFileSync(path.join(changeRoot, "CONTEXT.md"), "utf8").replace("- Repository root:", "- Repository root: done-test-root"), "utf8");
   fs.writeFileSync(path.join(changeRoot, "PLAN.md"), fs.readFileSync(path.join(changeRoot, "PLAN.md"), "utf8")
     .replace("- Change:", "- Change: verify done evidence")
-    .replace("| T01 | | - | | | | low | queued |", "| T01 | Verify evidence | - | successful evidence record | node --version | command fails | low | done |"), "utf8");
+    .replace("| T01 | | - | | | | low | queued |", `| T01 | Verify evidence | - | successful evidence record | ${commandText} | command fails | low | done |`), "utf8");
   fs.writeFileSync(path.join(changeRoot, "PROGRESS.md"), fs.readFileSync(path.join(changeRoot, "PROGRESS.md"), "utf8")
     .replace("- **Phase**: S0", "- **Phase**: S8")
     .replace("- **Status**: active", "- **Status**: done")
@@ -93,7 +94,7 @@ try {
   const evidencePathOnDisk = path.join(evidenceDir, evidenceFile);
   let review = fs.readFileSync(path.join(changeRoot, "REVIEW.md"), "utf8")
     .replace("- **Status**: draft", "- **Status**: final")
-    .replace("- AC-01: PASS - Command: `<exact command>` | Result: exit 0 | Evidence: [machine evidence](evidence/<generated-file>.json)", `- AC-01: PASS - Command: node --version | Result: exit 0 | Evidence: [machine evidence](${evidenceRelative})`)
+    .replace("- AC-01: PASS - Command: `<exact command>` | Result: exit 0 | Evidence: [machine evidence](evidence/<generated-file>.json)", `- AC-01: PASS - Command: ${commandText} | Result: exit 0 | Evidence: [machine evidence](${evidenceRelative})`)
     .replace("- Standards: PASS|FAIL|SKIP - <actual commands -> result>", "- Standards: PASS - node --version -> exit 0")
     .replace("- Acceptance: PASS|FAIL|SKIP - <all AC lines above have individual evidence>", "- Acceptance: PASS - AC-01 has individual machine evidence");
   fs.writeFileSync(path.join(changeRoot, "REVIEW.md"), review, "utf8");
@@ -101,6 +102,13 @@ try {
   assert.equal(result.status, 0, result.stderr);
   result = run(validatePath, [projectRoot, changeId]);
   assert.equal(result.status, 0, result.stderr);
+
+  const mismatchedReview = review.replace(commandText, "node --version");
+  fs.writeFileSync(path.join(changeRoot, "REVIEW.md"), mismatchedReview, "utf8");
+  result = run(validatePath, [projectRoot, changeId]);
+  assert.equal(result.status, 1, "REVIEW Command must match PRD Verify");
+  assert.match(result.stderr, /Command must match PRD Verify/);
+  fs.writeFileSync(path.join(changeRoot, "REVIEW.md"), review, "utf8");
 
   const doneProgressPath = path.join(changeRoot, "PROGRESS.md");
   const doneProgress = fs.readFileSync(doneProgressPath, "utf8");
@@ -114,14 +122,14 @@ try {
   result = run(indexPath, ["sync", projectRoot]);
   assert.equal(result.status, 0, result.stderr);
 
-  const importantReview = review.replace("- none\n- Format:", "- IC-01: T01 | important check without captured evidence\n- Format:");
-  assert.match(importantReview, /IC-01: T01/);
+  const importantReview = review.replace("- none\n- Format:", "- IC-01: T01 | Command: node --version | evidence required\n- Format:");
+  assert.match(importantReview, /IC-01: T01 \| Command: node --version/);
   fs.writeFileSync(path.join(changeRoot, "REVIEW.md"), importantReview, "utf8");
   result = run(indexPath, ["sync", projectRoot]);
   assert.equal(result.status, 0, result.stderr);
   result = run(validatePath, [projectRoot, changeId]);
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /IC-01 requires successful run-evidence for T01/);
+  assert.match(result.stderr, /IC-01 requires successful evidence for T01/);
   fs.writeFileSync(path.join(changeRoot, "REVIEW.md"), review, "utf8");
 
   const producerRecord = JSON.parse(fs.readFileSync(evidencePathOnDisk, "utf8"));
@@ -131,7 +139,7 @@ try {
   assert.equal(result.status, 0, result.stderr);
   result = run(validatePath, [projectRoot, changeId]);
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /successful machine evidence/);
+  assert.match(result.stderr, /successful evidence/);
   producerRecord.producer = "run-evidence.mjs";
   fs.writeFileSync(evidencePathOnDisk, `${JSON.stringify(producerRecord, null, 2)}\n`, "utf8");
 
@@ -168,7 +176,7 @@ try {
   assert.equal(result.status, 0, result.stderr);
   result = run(validatePath, [projectRoot, changeId]);
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /successful machine evidence/);
+  assert.match(result.stderr, /successful evidence/);
 
   console.log("validate.done.test PASS");
 } finally {

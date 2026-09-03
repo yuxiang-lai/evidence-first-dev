@@ -15,6 +15,8 @@ export const GENERATED_BEGIN = "<!-- BEGIN GENERATED STATUS -->";
 export const GENERATED_END = "<!-- END GENERATED STATUS -->";
 export const PROJECT_CONTEXT_SCHEMA = "evidence-first-dev/project-context-v1";
 export const WORKFLOW_CONTRACT = "evidence-first-dev/workflow-v1";
+export const PROJECT_HISTORY_LIMIT = 5;
+export const RECENT_DONE_LIMIT = 10;
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const skillRoot = path.dirname(scriptDir);
@@ -28,6 +30,28 @@ function fail(message, code = 1) {
 
 function readText(filePath) {
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
+}
+
+function sectionAfterHeading(text, heading, level = 2) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const start = text.search(new RegExp(`^#{${level}} ${escaped}[ \\t]*$`, "im"));
+  if (start < 0) return "";
+  const rest = text.slice(start);
+  const nextHeading = rest.search(new RegExp(`\\r?\\n#{1,${level}} `));
+  return nextHeading < 0 ? rest : rest.slice(0, nextHeading);
+}
+
+export function projectHistoryRows(text) {
+  return sectionAfterHeading(text, "Update history")
+    .split(/\r?\n/)
+    .filter((line) => /^\|/.test(line))
+    .filter((line) => !/^\|\s*(?:Date\b|---)/i.test(line));
+}
+
+function recentDoneCount(text) {
+  return sectionAfterHeading(text, "Recently done", 3)
+    .split(/\\r?\\n/)
+    .filter((line) => /^#### `[^`]+`$/.test(line.trim())).length;
 }
 
 export function field(text, name) {
@@ -145,6 +169,22 @@ export function scanProject(root) {
   return { changes, orphanDirectories };
 }
 
+function ledgerRepairErrors(project) {
+  const errors = [...project.orphanDirectories.map((directory) => `${directory}: no PROGRESS.md`)];
+  for (const record of project.changes) {
+    if (!["active", "blocked", "done"].includes(record.status)) {
+      errors.push(`${record.id}: invalid Status ${record.status || "(missing)"}`);
+    }
+    if (!fs.existsSync(record.prdPath)) errors.push(`${record.id}: missing PRD.md`);
+    if (record.status !== "invalid" && !fs.existsSync(record.progressPath)) errors.push(`${record.id}: missing PROGRESS.md`);
+    if (fs.existsSync(record.prdPath) && field(record.prd, "ID") !== record.id) errors.push(`${record.id}: PRD ID does not match directory`);
+    if (fs.existsSync(record.progressPath) && field(record.progress, "Change") !== record.id) errors.push(`${record.id}: PROGRESS Change does not match directory`);
+    if (fs.existsSync(record.prdPath) && field(record.prd, "Ledger schema") !== "evidence-first-dev/change-ledger-v1") errors.push(`${record.id}: PRD Ledger schema is missing or unsupported`);
+    if (fs.existsSync(record.progressPath) && field(record.progress, "Ledger schema") !== "evidence-first-dev/change-ledger-v1") errors.push(`${record.id}: PROGRESS Ledger schema is missing or unsupported`);
+  }
+  return errors;
+}
+
 function renderRecord(record, root) {
   const workflowRoot = path.join(root, "docs");
   const detail = [
@@ -173,7 +213,7 @@ function renderRecord(record, root) {
 export function renderGeneratedStatus(root, project = scanProject(root)) {
   const active = project.changes.filter((record) => record.status === "active");
   const blocked = project.changes.filter((record) => record.status === "blocked");
-  const done = project.changes.filter((record) => record.status === "done").slice(0, 10);
+  const done = project.changes.filter((record) => record.status === "done").slice(0, RECENT_DONE_LIMIT);
   const invalid = project.changes.filter((record) => !["active", "blocked", "done"].includes(record.status));
   const lines = [
     GENERATED_BEGIN,
@@ -277,6 +317,10 @@ export function checkWorkflow(root) {
     const context = readText(contextPath);
     if (!field(context, "Repository root")) errors.push("docs/CONTEXT.md Repository root is missing");
     if (field(context, "Schema") !== PROJECT_CONTEXT_SCHEMA) errors.push(`docs/CONTEXT.md requires Schema ${PROJECT_CONTEXT_SCHEMA}`);
+    const historyRows = projectHistoryRows(context);
+    if (historyRows.length > PROJECT_HISTORY_LIMIT) {
+      errors.push(`docs/CONTEXT.md Update history has ${historyRows.length} rows; keep at most ${PROJECT_HISTORY_LIMIT} and archive older rows`);
+    }
   }
   if (!fs.existsSync(workflowPath)) errors.push("missing docs/WORKFLOW.md recovery entry");
   else {
@@ -295,6 +339,9 @@ export function checkWorkflow(root) {
     if (!actual) errors.push("docs/WORKFLOW.md has no generated status block");
     else if (indexMode === "machine" && actual !== expected) errors.push("docs/WORKFLOW.md status is stale; run index.mjs sync");
     else if (indexMode === "portable") {
+      if (recentDoneCount(actual) > RECENT_DONE_LIMIT) {
+        errors.push(`portable docs/WORKFLOW.md lists more than ${RECENT_DONE_LIMIT} completed changes; remove older done entries from the index`);
+      }
       for (const record of project.changes.filter((item) => ["active", "blocked"].includes(item.status))) {
         if (!actual.includes(record.id) || !actual.includes(record.relativeProgress)) errors.push(`portable status index is missing unfinished change ${record.id} or its PROGRESS.md path`);
       }
@@ -305,6 +352,14 @@ export function checkWorkflow(root) {
 
 function printResume(root, requestedId) {
   const result = syncWorkflow(root);
+  const repairErrors = ledgerRepairErrors(result.project);
+  if (repairErrors.length) {
+    console.error("RESUME NEEDS-REPAIR: recovery state is not trustworthy");
+    for (const error of repairErrors) console.error(`- ${error}`);
+    console.error("Repair the ledger or migrate it before continuing; no task was selected.");
+    process.exitCode = 1;
+    return;
+  }
   const { changes } = result.project;
   const unfinished = changes.filter((record) => record.status === "active" || record.status === "blocked");
   let selected;

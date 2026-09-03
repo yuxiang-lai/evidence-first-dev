@@ -97,6 +97,9 @@ Read [references/workflow.md](references/workflow.md) for mode boundaries,
 phase gates, task splitting, TDD, debugging, UI, research, recovery, and
 handoff rules. Read [references/templates.md](references/templates.md) when
 repairing or manually creating ledger files.
+Read [references/retention.md](references/retention.md) when the project memory
+or recovery entry needs compaction; keep the new-session path bounded without
+deleting unfinished work or detailed change history.
 
 This is the canonical workflow for non-trivial development. Do not load the
 older workflow skills for the same change after this ledger is selected.
@@ -342,14 +345,16 @@ passes executable arguments without a shell; use an explicit shell such as
 syntax is genuinely required. The evidence record includes a schema and
 producer marker so the validator can distinguish runner output from a
 hand-written PASS; this is provenance metadata, not tamper-proof signing. It
-redacts common secret formats, caps captured output, and records a v2
+redacts common secret formats, caps captured output, and records a v3
 `failureClass`: `success`, `non-zero-exit`, `timeout`, `output-limit`,
 `spawn-failure`, or `signal`. Do not use it for commands that print secrets;
 use `--no-preview` when even redacted previews are not appropriate.
 
-Command evidence is versioned as `evidence-first-dev/command-evidence-v2`.
+Command evidence is versioned as `evidence-first-dev/command-evidence-v3`.
 When an old evidence schema is incompatible, rerun the command through the
 current runner instead of editing the old record.
+Read [references/schemas.md](references/schemas.md) before changing any durable
+contract or validator interpretation.
 
 Without Node.js, run the real project command normally and record the result in
 `docs/changes/<id>/evidence/<subject>.md` using `templates/EVIDENCE.md`. Set

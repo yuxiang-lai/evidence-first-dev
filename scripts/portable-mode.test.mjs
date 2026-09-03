@@ -40,7 +40,7 @@ try {
   prd = prd
     .replace("### Observed facts\n-", "### Observed facts\n- The portable evidence path is deterministic and testable.")
     .replace("### Goal\n-", "### Goal\n- Close a ledger with manual evidence when Node.js automation is unavailable.")
-    .replace("| AC-01 | | | | pending |", "| AC-01 | Given a project command is observed, when it exits successfully, then the result is recorded in the ledger | manual observation | exit code 0 and concrete output | pass |");
+    .replace("| AC-01 | | | | pending |", "| AC-01 | Given a project command is observed, when it exits successfully, then the result is recorded in the ledger | printf portable-check | exit code 0 and concrete output | pass |");
   for (const [label, value] of [
     ["Beneficiary", "developers without Node.js"],
     ["Problem cost", "the workflow becomes unavailable in language-specific environments"],
@@ -102,7 +102,7 @@ try {
     .replace("- AC-01: PASS - Command: `<exact command>` | Result: exit 0 | Evidence: [machine evidence](evidence/<generated-file>.json)", "- AC-01: PASS - Command: printf portable-check | Result: exit 0 | Evidence: [manual evidence](evidence/AC-01-portable.md)")
     .replace("- Standards: PASS|FAIL|SKIP - <actual commands -> result>", "- Standards: PASS - portable evidence structure -> observed")
     .replace("- Acceptance: PASS|FAIL|SKIP - <all AC lines above have individual evidence>", "- Acceptance: PASS - AC-01 has individual manual evidence")
-    .replace("- none\n- Format:", "- IC-01: AC-01 | portable-check; evidence required\n- Format:");
+    .replace("- none\n- Format:", "- IC-01: AC-01 | Command: printf portable-check | evidence required\n- Format:");
   fs.writeFileSync(path.join(changeRoot, "REVIEW.md"), review, "utf8");
 
   result = run(indexPath, ["sync", projectRoot]);
@@ -117,7 +117,7 @@ try {
   fs.writeFileSync(progressPath, fs.readFileSync(progressPath, "utf8").replace("- **Evidence mode**: portable", "- **Evidence mode**: machine"), "utf8");
   result = run(validatePath, [projectRoot, changeId]);
   assert.equal(result.status, 1, "machine mode must reject manual-only evidence");
-  assert.match(result.stderr, /successful machine evidence/);
+  assert.match(result.stderr, /successful evidence/);
 
   console.log("portable-mode.test PASS");
 } finally {

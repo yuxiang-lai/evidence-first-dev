@@ -8,13 +8,14 @@
 - AC-01: PASS - Command: `<exact command>` | Result: exit 0 | Evidence: [machine evidence](evidence/<generated-file>.json)
 
 List every AC on its own line using exactly `Command`, `Result`, and `Evidence`.
+The `Command` must be the same command written in that AC's PRD `Verify` field.
 In `portable` mode, use `[manual evidence](evidence/<id>.md)` and link the
 corresponding file. A summary line alone is not acceptance evidence.
 
 ## Important checks
 
 - none
-- Format: `IC-01: AC-01 or T01 | <important command>; evidence required`
+- Format: `IC-01: AC-01 or T01 | Command: <exact command> | evidence required`
 - Each `IC-*` subject must have successful evidence in the selected Evidence
   mode before the change can be marked `done`.
 

@@ -34,23 +34,30 @@ git clone https://gitee.com/yuxiang-lai/evidence-first-dev.git
 [Gitee 仓库](https://gitee.com/yuxiang-lai/evidence-first-dev)，选择
 `Download ZIP`，解压后把解压目录作为 `<skill-root>`。
 
+仓库本身是开发源码仓库，包含测试、fixture、文档和适配器。用户安装时应
+使用下面的安装器复制精选 payload，不要把整个源码仓库当作目标项目里的 skill
+目录。精选清单由 `scripts/payload.txt` 维护。
+
 ## Codex
 
-在终端执行：
-
-```bash
-git clone https://github.com/yuxiang-lai/evidence-first-dev.git \
-  ~/.codex/skills/evidence-first-dev
-```
-
-Windows PowerShell：
+先从 GitHub 或 Gitee 下载本仓库，然后在源码根目录执行。安装器只复制
+`SKILL.md`、references、templates 和必要脚本：
 
 ```powershell
-git clone https://github.com/yuxiang-lai/evidence-first-dev `
-  "$HOME\.codex\skills\evidence-first-dev"
+New-Item -ItemType Directory -Force "$HOME\.codex\skills\evidence-first-dev" | Out-Null
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -Tool codex -ProjectRoot "$HOME\.codex\skills\evidence-first-dev"
 ```
 
-然后重新打开 Codex 会话。没有 Git 时，将 ZIP 解压到同一个目录即可。
+macOS/Linux：
+
+```bash
+mkdir -p ~/.codex/skills/evidence-first-dev
+sh scripts/install.sh codex ~/.codex/skills/evidence-first-dev
+```
+
+然后重新打开 Codex 会话。贡献者需要修改 skill 源码时，才建议完整 clone 到
+单独的源码目录，例如 `~/src/evidence-first-dev`。
 
 ## Cursor
 
@@ -71,14 +78,23 @@ Copy-Item `
 ```
 
 重启或重新加载 Cursor。规则文件是独立的，不要求把整个 skill 克隆到目标项目。
-若希望使用脚本和完整参考资料，可把整个仓库放在目标项目的 `.ai/evidence-first-dev/`。
+若希望使用脚本和完整参考资料，使用安装器的默认 `full` 模式；它会把精选
+payload 放到 `.ai/evidence-first-dev/`，不会复制源码仓库中的 README、fixtures、
+测试、适配器或安装器。
 
 ## Claude Code
 
-如果当前版本支持目录式 Agent Skills，将仓库放入目标项目：
+如果当前版本支持目录式 Agent Skills，使用安装器将精选 payload 放入目标项目：
 
 ```text
 <project-root>/.claude/skills/evidence-first-dev/
+```
+
+也可以运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -Tool claude -ProjectRoot C:\path\to\your-project
 ```
 
 保留根目录 `SKILL.md`。如果当前版本只读取项目规则，把根目录 `AGENTS.md`
@@ -151,7 +167,9 @@ sh scripts/install.sh cursor /path/to/your-project
 sh scripts/install.sh generic /path/to/your-project
 ```
 
-脚本只负责安装规则桥接，不会修改目标项目代码、安装依赖或创建变更 ledger。
+脚本只负责安装规则桥接和精选 skill payload，不会修改目标项目代码、安装依赖或
+创建变更 ledger。`-Mode bridge` 只安装规则桥接；默认 `-Mode full` 还会安装
+`.ai/evidence-first-dev/` 精选 payload。Claude 和 Codex 使用 full payload。
 
 ## 安装后检查
 
@@ -193,7 +211,7 @@ index synchronization, validation, and machine evidence capture.
 
 | Tool | Recommended integration | Node.js required |
 | --- | --- | --- |
-| Codex | Install under `~/.codex/skills/evidence-first-dev` | No |
+| Codex | Copy the curated payload under `~/.codex/skills/evidence-first-dev` | No |
 | Cursor | Copy one `.mdc` file into `.cursor/rules/` | No |
 | Claude Code | Put the directory under `.claude/skills/` when supported | No |
 | Trae | Import the generic adapter into project rules or Custom Agent/Skill | No |
@@ -201,8 +219,10 @@ index synchronization, validation, and machine evidence capture.
 | Other tools | Copy `AGENTS.md` to the project root or import the generic adapter | No |
 
 Clone from GitHub or Gitee, or download a ZIP. See the commands above. The
-repository also provides optional `scripts/install.ps1` and `scripts/install.sh`
-for Cursor and generic project-rule installation.
+repository provides optional `scripts/install.ps1` and `scripts/install.sh` for
+curated Codex, Claude, Cursor, and generic project-rule installation. The
+default `full` mode copies only the payload listed in `scripts/payload.txt`;
+`bridge` copies only a thin host rule where supported.
 
 Adapters are intentionally thin. `SKILL.md` remains the detailed source of
 truth; `AGENTS.md` and the generic/Cursor files are compact bridges for hosts

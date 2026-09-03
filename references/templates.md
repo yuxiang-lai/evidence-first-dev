@@ -147,6 +147,9 @@ that fact.
 
 ## CONTEXT.md
 
+`docs/changes/<id>/CONTEXT.md` is scoped to one change. It should link to
+project memory instead of copying unrelated facts.
+
 ```md
 # CONTEXT
 
@@ -201,6 +204,10 @@ that fact.
 
 ## WORKFLOW.md
 
+`docs/WORKFLOW.md` is a bounded recovery index: it contains all active or
+blocked changes and only the ten most recent completed changes. It is not a
+second history ledger.
+
 ```md
 # WORKFLOW
 
@@ -225,6 +232,10 @@ This is the project's single recovery entry for non-trivial development.
 ```
 
 ## PROJECT-CONTEXT.md
+
+`docs/CONTEXT.md` is bounded current-state memory. Update facts in place, do
+not append chat transcripts, and keep only the latest five meaningful
+project-wide updates. Historical details belong to the relevant change ledger.
 
 ```md
 # PROJECT CONTEXT
@@ -399,7 +410,7 @@ The required shape is:
 - AC-01: PASS - Command: npm test | Result: exit 0 | Evidence: [machine evidence](evidence/<generated-file>.json)
 ```
 
-In machine mode, the link must point to a v2 record produced by
+In machine mode, the link must point to a v3 record produced by
 `run-evidence.mjs` for the same AC and must have `exitCode: 0` and
 `failureClass: success`. In portable mode, it may point to a valid manual
 evidence file for the same AC. A summary line alone is not acceptance evidence.
@@ -407,7 +418,7 @@ evidence file for the same AC. A summary line alone is not acceptance evidence.
 ## Important checks
 
 - none
-- Format: `IC-01: AC-01 or T01 | <important command>; evidence required`
+- Format: `IC-01: AC-01 or T01 | Command: <exact command> | evidence required`
 - Each `IC-*` subject must have successful evidence in the selected Evidence
   mode before the change can be marked `done`.
 

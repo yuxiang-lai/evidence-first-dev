@@ -17,6 +17,7 @@ rules that do not protect a real risk.
 - Prefer machine-enforced invariants over repeated prose when a rule is a real
   completion gate.
 - Keep evidence schemas, templates, and validators synchronized.
+- Read `references/schemas.md` before changing a durable contract.
 - If a required field, status meaning, machine evidence interpretation, or
   validator gate changes, bump the relevant schema and add an explicit
   migration note. An explicitly selected additive Portable evidence mode may
@@ -38,6 +39,7 @@ node scripts/fixture-smoke.test.mjs
 node scripts/portable-mode.test.mjs
 node scripts/doctor.test.mjs
 node scripts/install.test.mjs
+node scripts/retention.test.mjs
 python <path-to-skill-creator>/scripts/quick_validate.py .
 ```
 

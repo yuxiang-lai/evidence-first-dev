@@ -10,7 +10,7 @@ import { checkWorkflow } from "./index.mjs";
 const root = path.resolve(process.argv[2] || ".");
 const changeId = process.argv[3];
 const errors = [];
-const EVIDENCE_SCHEMA = "evidence-first-dev/command-evidence-v2";
+const EVIDENCE_SCHEMA = "evidence-first-dev/command-evidence-v3";
 const EVIDENCE_PRODUCER = "run-evidence.mjs";
 const MANUAL_EVIDENCE_SCHEMA = "evidence-first-dev/manual-evidence-v1";
 const MANUAL_EVIDENCE_PRODUCER = "manual-observed";
@@ -37,6 +37,14 @@ function meaningful(value) {
 
 function decisionValue(value) {
   return Boolean(value?.trim()) && !/^(tbd|todo|n\/a|none|-)$/i.test(value.trim());
+}
+
+function normalizeCommand(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function commandsMatch(actual, expected) {
+  return normalizeCommand(actual) === normalizeCommand(expected);
 }
 
 function present(value) {
@@ -90,11 +98,13 @@ function isMachineEvidence(record, subject, successful = false) {
   return record?.schema === EVIDENCE_SCHEMA
     && record?.producer === EVIDENCE_PRODUCER
     && record?.subject === subject
+    && meaningful(record?.command)
     && Array.isArray(record?.args)
     && typeof record?.executable === "string"
     && typeof record?.startedAt === "string"
     && typeof record?.finishedAt === "string"
     && Number.isInteger(record?.exitCode)
+    && record?.redaction === "applied-before-preview-and-hash"
     && FAILURE_CLASSES.has(record?.failureClass)
     && ((record.failureClass === "success" && record.exitCode === 0)
       || (record.failureClass !== "success" && record.exitCode !== 0))
@@ -119,13 +129,13 @@ function isManualEvidence(record, subject, successful = false) {
     && (!successful || record.exitCode === 0);
 }
 
-function evidenceAllowed(entry, subject, successful, evidenceMode) {
-  if (entry.kind === "machine") return isMachineEvidence(entry.record, subject, successful);
-  return evidenceMode === "portable" && isManualEvidence(entry.record, subject, successful);
+function evidenceAllowed(entry, subject, successful, evidenceMode, expectedCommand = "") {
+  if (entry.kind === "machine") return isMachineEvidence(entry.record, subject, successful) && commandsMatch(entry.record.command, expectedCommand);
+  return evidenceMode === "portable" && isManualEvidence(entry.record, subject, successful) && commandsMatch(entry.record.command, expectedCommand);
 }
 
-function linkedEvidenceAllowed(link, subject, successful, evidenceMode) {
-  if (!link.entry || !evidenceAllowed(link.entry, subject, successful, evidenceMode)) return false;
+function linkedEvidenceAllowed(link, subject, successful, evidenceMode, expectedCommand = "") {
+  if (!link.entry || !evidenceAllowed(link.entry, subject, successful, evidenceMode, expectedCommand)) return false;
   return link.entry.kind === "machine"
     ? link.label === "machine evidence"
     : link.label === "manual evidence";
@@ -145,15 +155,15 @@ function linkedEvidence(changeRoot, line) {
     .map((match) => ({ label: match[1], reference: match[2], entry: evidenceEntry(changeRoot, match[2]) }));
 }
 
-function hasEvidenceFor(changeRoot, subject, successful = false, evidenceMode = "machine") {
-  return evidenceRecords(changeRoot).some((entry) => evidenceAllowed(entry, subject, successful, evidenceMode));
+function hasEvidenceFor(changeRoot, subject, successful = false, evidenceMode = "machine", expectedCommand = "") {
+  return evidenceRecords(changeRoot).some((entry) => evidenceAllowed(entry, subject, successful, evidenceMode, expectedCommand));
 }
 
-function hasLinkedEvidenceByMode(changeRoot, progress, subject, successful = false, evidenceMode = "machine") {
+function hasLinkedEvidenceByMode(changeRoot, progress, subject, successful = false, evidenceMode = "machine", expectedCommand = "") {
   return withoutFencedCode(progress).split(/\r?\n/).some((line) => {
     const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
     if (cells[1] !== subject) return false;
-    return linkedEvidence(changeRoot, line).some((link) => linkedEvidenceAllowed(link, subject, successful, evidenceMode));
+    return linkedEvidence(changeRoot, line).some((link) => linkedEvidenceAllowed(link, subject, successful, evidenceMode, expectedCommand));
   });
 }
 
@@ -165,7 +175,12 @@ function importantChecks(review) {
   const nextHeading = rest.search(/\r?\n## /);
   const section = nextHeading < 0 ? rest : rest.slice(0, nextHeading);
   return [...section.matchAll(/^[ \t]*-[ \t]*(IC-\d+)[ \t]*:[ \t]*(.+)$/gim)]
-    .map((match) => ({ id: match[1], text: match[2].trim(), subjects: [...match[2].matchAll(/\b(?:AC-\d+|T\d+)\b/g)].map((item) => item[0]) }))
+    .map((match) => {
+      const text = match[2].trim();
+      const subjectText = text.split(/\s*\|\s*Command:/i)[0];
+      const command = text.match(/\bCommand:[ \t]*([^|]+?)(?:[ \t]*\|[ \t]*evidence required)?[ \t]*$/i)?.[1]?.trim() || "";
+      return { id: match[1], text, command, subjects: [...subjectText.matchAll(/\b(?:AC-\d+|T\d+)\b/g)].map((item) => item[0]) };
+    })
     .filter((check) => !/^none\s*$/i.test(check.text));
 }
 
@@ -188,8 +203,12 @@ function hasStandardAcceptanceFormatByMode(reviewLine, evidenceMode = "machine")
   return new RegExp(`^pass[ \\t]*-[ \\t]*command:[ \\t]*.+?[ \\t]*\\|[ \\t]*result:[ \\t]*exit[ \\t]+0[ \\t]*\\|[ \\t]*evidence:[ \\t]*\\[${label} evidence\\]\\(evidence/[^)\\r\\n]+\\)[ \\t]*$`, "i").test(reviewLine);
 }
 
-function hasReviewEvidenceByMode(changeRoot, reviewLine, subject, evidenceMode = "machine") {
-  return linkedEvidence(changeRoot, reviewLine).some((link) => linkedEvidenceAllowed(link, subject, true, evidenceMode));
+function reviewCommand(reviewLine) {
+  return reviewLine.match(/^pass[ \t]*-[ \t]*command:[ \t]*(.+?)[ \t]*\|[ \t]*result:/i)?.[1]?.trim() || "";
+}
+
+function hasReviewEvidenceByMode(changeRoot, reviewLine, subject, evidenceMode = "machine", expectedCommand = "") {
+  return linkedEvidence(changeRoot, reviewLine).some((link) => linkedEvidenceAllowed(link, subject, true, evidenceMode, expectedCommand));
 }
 
 function phaseNumber(phase) {
@@ -303,7 +322,10 @@ if (!errors.length) {
       if (decisionDepth === "minimal" && !meaningful(lineValue(prd, "Why no comparison"))) errors.push("minimal decision requires Why no comparison");
       if (decisionDepth === "compare") {
         if (!/^##\s+D-\d+/mi.test(decisions)) errors.push("S3 compare requires a numbered decision in DECISIONS.md");
-        if (!decisionValue(lineValue(decisions, "Chosen")) || !meaningful(lineValue(decisions, "Reason tied to constraints/evidence"))) errors.push("DECISIONS.md needs chosen option and evidence-based reason");
+        for (const label of ["Date", "Question", "Options considered", "Chosen", "Reason tied to constraints/evidence", "Rejected", "Consequence", "Revisit when", "Confirmation source"]) {
+          const value = lineValue(decisions, label);
+          if (!(label === "Chosen" || label === "Rejected" ? decisionValue(value) : meaningful(value))) errors.push(`DECISIONS.md ${label} is missing for compare`);
+        }
       }
     }
 
@@ -380,13 +402,18 @@ if (!errors.length) {
     if (status === "done") {
       if (acceptanceRows.some((match) => match[5].toLowerCase() !== "pass")) errors.push("done requires every AC to be pass; pending, fail, or blocked is not complete");
       for (const id of ids) {
-        if (!hasLinkedEvidenceByMode(changeRoot, progress, id, true, evidenceMode) && !hasEvidenceFor(changeRoot, id, true, evidenceMode)) errors.push(`${id} needs a successful ${evidenceMode === "portable" ? "machine or manual" : "machine"} evidence reference in PROGRESS.md or evidence/`);
+        const acceptance = acceptanceRows.find((match) => match[1] === id);
+        const expectedCommand = acceptance?.[3]?.trim() || "";
+        if (!hasLinkedEvidenceByMode(changeRoot, progress, id, true, evidenceMode, expectedCommand) && !hasEvidenceFor(changeRoot, id, true, evidenceMode, expectedCommand)) errors.push(`${id} needs a successful evidence reference for PRD Verify command: ${expectedCommand}`);
         const reviewLine = reviewAcceptanceLine(review, id);
-        if (!hasStandardAcceptanceFormatByMode(reviewLine, evidenceMode) || !hasReviewEvidenceByMode(changeRoot, reviewLine, id, evidenceMode)) errors.push(`REVIEW.md needs an individual PASS in standard Command/Result/Evidence format with a valid evidence link for ${id}`);
+        const reviewCommandValue = reviewCommand(reviewLine);
+        if (!commandsMatch(reviewCommandValue, expectedCommand)) errors.push(`REVIEW.md Command must match PRD Verify for ${id}`);
+        if (!hasStandardAcceptanceFormatByMode(reviewLine, evidenceMode) || !hasReviewEvidenceByMode(changeRoot, reviewLine, id, evidenceMode, expectedCommand)) errors.push(`REVIEW.md needs an individual PASS in standard Command/Result/Evidence format with a valid evidence link for ${id}`);
       }
       for (const check of importantChecks(review)) {
         if (!check.subjects.length) errors.push(`${check.id} must name an AC or task subject`);
-        for (const subject of check.subjects) if (!hasEvidenceFor(changeRoot, subject, true, evidenceMode)) errors.push(`${check.id} requires successful ${evidenceMode === "portable" ? "machine or manual evidence" : "run-evidence"} for ${subject}`);
+        if (!meaningful(check.command)) errors.push(`${check.id} must declare Command: <exact command>`);
+        for (const subject of check.subjects) if (!hasEvidenceFor(changeRoot, subject, true, evidenceMode, check.command)) errors.push(`${check.id} requires successful evidence for ${subject} using ${check.command || "its declared command"}`);
       }
       if (planRows.some((match) => match[8].toLowerCase() !== "done")) errors.push("done requires every PLAN task to be done");
       if (!/^[-*] \*\*Status\*\*:\s*final\s*$/im.test(review)) errors.push("done requires REVIEW Status final");
@@ -411,7 +438,8 @@ if (!errors.length) {
     if (phaseIndex >= 7 && status !== "done") {
       for (const check of importantChecks(review)) {
         if (!check.subjects.length) errors.push(`${check.id} must name an AC or task subject`);
-        for (const subject of check.subjects) if (!hasEvidenceFor(changeRoot, subject, false, evidenceMode)) errors.push(`${check.id} requires ${evidenceMode === "portable" ? "machine or manual evidence" : "run-evidence"} for ${subject}`);
+        if (!meaningful(check.command)) errors.push(`${check.id} must declare Command: <exact command>`);
+        for (const subject of check.subjects) if (!hasEvidenceFor(changeRoot, subject, false, evidenceMode, check.command)) errors.push(`${check.id} requires evidence for ${subject} using ${check.command || "its declared command"}`);
       }
     }
 

@@ -26,7 +26,7 @@ const executable = commandArgs[0] || "";
 const executableArgs = commandArgs.slice(1);
 const command = [executable, ...executableArgs].join(" ");
 const MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
-const EVIDENCE_SCHEMA = "evidence-first-dev/command-evidence-v2";
+const EVIDENCE_SCHEMA = "evidence-first-dev/command-evidence-v3";
 const EVIDENCE_PRODUCER = "run-evidence.mjs";
 const FAILURE_CLASSES = new Set(["success", "non-zero-exit", "timeout", "output-limit", "spawn-failure", "signal"]);
 const WINDOWS_COMMAND_WRAPPERS = new Set(["npm", "npx"]);
@@ -57,9 +57,26 @@ function preview(value) {
 
 function redact(value) {
   return String(value || "")
+    .replace(/((?:["']?)(?:api[_-]?key|access[_-]?token|refresh[_-]?token|password|passwd|secret)(?:["']?)[ \t]*:[ \t]*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^,}\s]+)/gi, "$1[REDACTED]")
+    .replace(/((?:^|\s)--?(?:api[-_]?key|access[-_]?token|refresh[-_]?token|password|passwd|secret)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi, "$1[REDACTED]")
     .replace(/(authorization\s*[:=]\s*bearer\s+)[^\s,;]+/gi, "$1[REDACTED]")
     .replace(/((?:api[_-]?key|access[_-]?token|refresh[_-]?token|password|passwd|secret)\s*[:=]\s*)[^\s,;]+/gi, "$1[REDACTED]")
     .replace(/\b(?:sk|ghp|github_pat|xox[baprs])_[A-Za-z0-9_-]+\b/g, "[REDACTED]");
+}
+
+function redactArgs(args) {
+  const redacted = [];
+  let redactNext = false;
+  for (const argument of args) {
+    if (redactNext) {
+      redacted.push("[REDACTED]");
+      redactNext = false;
+      continue;
+    }
+    redacted.push(redact(argument));
+    if (/^--?(?:api[-_]?key|access[-_]?token|refresh[-_]?token|password|passwd|secret)$/i.test(argument)) redactNext = true;
+  }
+  return redacted;
 }
 
 function invocationForPlatform(value, args) {
@@ -107,6 +124,8 @@ const result = spawnSync(invocation.executable, invocation.args, {
 const finishedAt = new Date();
 const stdout = result.stdout || "";
 const stderr = result.stderr || "";
+const redactedStdout = redact(stdout);
+const redactedStderr = redact(stderr);
 const exitCode = typeof result.status === "number" ? result.status : 1;
 const signal = result.signal || null;
 const error = result.error?.message || null;
@@ -137,7 +156,7 @@ const evidence = {
   subject,
   command: redact(command),
   executable: redact(invocation.executable),
-  args: invocation.args.map((argument) => redact(argument)),
+  args: redactArgs(invocation.args),
   cwd: projectRoot,
   startedAt: startedAt.toISOString(),
   finishedAt: finishedAt.toISOString(),
@@ -148,10 +167,11 @@ const evidence = {
   timedOut,
   outputLimitBytes: MAX_OUTPUT_BYTES,
   outputLimitExceeded,
-  stdoutSha256: noPreview ? null : hash(stdout),
-  stderrSha256: noPreview ? null : hash(stderr),
-  stdoutPreview: noPreview ? "suppressed by --no-preview" : preview(redact(stdout)),
-  stderrPreview: noPreview ? "suppressed by --no-preview" : preview(redact(stderr)),
+  redaction: "applied-before-preview-and-hash",
+  stdoutSha256: noPreview ? null : hash(redactedStdout),
+  stderrSha256: noPreview ? null : hash(redactedStderr),
+  stdoutPreview: noPreview ? "suppressed by --no-preview" : preview(redactedStdout),
+  stderrPreview: noPreview ? "suppressed by --no-preview" : preview(redactedStderr),
 };
 fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
 

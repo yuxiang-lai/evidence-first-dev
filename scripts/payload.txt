@@ -1,0 +1,9 @@
+# Runtime payload copied into a target project's canonical skill directory.
+SKILL.md
+references/
+templates/
+scripts/doctor.mjs
+scripts/index.mjs
+scripts/init.mjs
+scripts/run-evidence.mjs
+scripts/validate.mjs

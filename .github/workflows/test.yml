@@ -1,0 +1,44 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  behavior:
+    name: Node ${{ matrix.node }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [18.x, 22.x]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Validate JavaScript syntax
+        run: |
+          node --check scripts/init.mjs
+          node --check scripts/index.mjs
+          node --check scripts/run-evidence.mjs
+          node --check scripts/validate.mjs
+          node --check scripts/doctor.mjs
+          node --check scripts/retention.test.mjs
+
+      - name: Run behavior tests
+        run: |
+          node scripts/validate.test.mjs
+          node scripts/validate.done.test.mjs
+          node scripts/run-evidence.test.mjs
+          node scripts/fixture-smoke.test.mjs
+          node scripts/portable-mode.test.mjs
+          node scripts/doctor.test.mjs
+          node scripts/install.test.mjs
+          node scripts/retention.test.mjs
