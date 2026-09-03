@@ -11,7 +11,9 @@ Evidence-First Dev 的流程和模板是工具无关的，Node.js 脚本只是�
 > `SKILL.md` 是唯一规范源，适配器只负责让具体工具找到它。
 
 不要为 Cursor、Claude Code 或其他工具复制一份完整流程。复制的适配器
-只应包含触发条件、canonical 文件路径和最少的使用约束。
+只应包含触发条件、canonical 文件路径和最少的使用约束。即使 canonical
+文件暂时不可访问，适配器也应保留足够的便携式最小规则，不能让工具静默
+退化成普通代码生成。
 
 ### 能力分层
 
@@ -35,20 +37,18 @@ Codex 可以原生使用本仓库：
 
 ### Cursor
 
-Cursor 最稳定的方式是使用项目级 `.cursor/rules`：
+Cursor 最稳定的方式是使用项目级 `.cursor/rules`。从 skill 仓库根目录向
+目标项目安装：
 
 ```powershell
-New-Item -ItemType Directory -Force .cursor | Out-Null
-git clone https://gitee.com/yuxiang-lai/evidence-first-dev.git `
-  ".cursor\evidence-first-dev"
-New-Item -ItemType Directory -Force ".cursor\rules" | Out-Null
-Copy-Item ".cursor\evidence-first-dev\adapters\cursor\evidence-first-dev.mdc" `
-  ".cursor\rules\evidence-first-dev.mdc"
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -Tool cursor -ProjectRoot C:\path\to\your-project
 ```
 
-仓库内的 [Cursor adapter](adapters/cursor/evidence-first-dev.mdc) 会引导
-Cursor 读取 `.cursor/evidence-first-dev/SKILL.md`。如果不希望对所有请求
-自动触发，可以把 `alwaysApply` 改为 `false`，在需要时启用该规则。
+没有 PowerShell 脚本时，直接将 [Cursor adapter](adapters/cursor/evidence-first-dev.mdc)
+复制到目标项目的 `.cursor/rules/evidence-first-dev.mdc`。适配器会优先读取
+`.ai/evidence-first-dev/SKILL.md`，并兼容旧的 `.cursor/evidence-first-dev/`
+路径。如果不希望对所有请求自动触发，可以把 `alwaysApply` 改为 `false`。
 
 ### Claude Code
 
@@ -64,9 +64,20 @@ Cursor 读取 `.cursor/evidence-first-dev/SKILL.md`。如果不希望对所有�
 
 ### Windsurf、Cline、Roo、Copilot、Gemini CLI、Aider
 
-这些工具通常可以通过各自的项目规则或约定文件接入。使用
-[generic adapter](adapters/generic/AGENTS.md) 作为内容基础，放入对应的
-规则入口，并把 `.ai/evidence-first-dev/SKILL.md` 改成实际路径：
+这些工具通常可以通过各自的项目规则或约定文件接入。优先运行通用安装脚本：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -Tool generic -ProjectRoot C:\path\to\your-project
+```
+
+或者使用 [generic adapter](adapters/generic/AGENTS.md) 作为内容基础，放入
+对应的规则入口。适配器会按候选路径查找完整 `SKILL.md`；找不到时仍使用
+便携式最小规则，不要求用户手动改写正文。
+
+Trae 与 CodeBuddy 的具体入口应以当前版本的项目规则、Rules、Skills 或
+Custom Agent 设置为准。仓库不猜测一个可能随版本变化的固定目录：导入
+`adapters/generic/AGENTS.md` 或根目录 `AGENTS.md` 即可完成规则级接入。
 
 | 工具 | 常见入口 | 推荐接入方式 |
 | --- | --- | --- |
@@ -88,7 +99,7 @@ Cursor 读取 `.cursor/evidence-first-dev/SKILL.md`。如果不希望对所有�
 .ai/evidence-first-dev/SKILL.md
 ```
 
-例如：
+例如，不使用安装脚本时：
 
 ```powershell
 New-Item -ItemType Directory -Force .ai | Out-Null
@@ -97,8 +108,28 @@ git clone https://gitee.com/yuxiang-lai/evidence-first-dev.git `
 Copy-Item ".ai\evidence-first-dev\adapters\generic\AGENTS.md" ".\AGENTS.md"
 ```
 
-如果工具规则文件位于其他目录，只需要调整 adapter 中的路径，不要复制或
-改写完整的 `SKILL.md`。
+如果工具规则文件位于其他目录，只需要把通用 adapter 放入该入口，不要复制
+或改写完整的 `SKILL.md`。如果完整 skill 存在于其他路径，把它加入 adapter
+的候选路径即可。
+
+### 安装后检查与卸载
+
+有 Node.js 18+ 时运行：
+
+```text
+node <skill-path>/scripts/doctor.mjs <project-root>
+```
+
+没有 Node.js 时，确认目标项目存在下列任一入口即可：
+
+```text
+.cursor/rules/evidence-first-dev.mdc
+AGENTS.md
+.claude/skills/evidence-first-dev/SKILL.md
+```
+
+卸载只删除安装的规则桥接文件，不要自动删除项目自己的 `docs/`、
+`evidence/` 或 `docs/changes/`。这些文件是环境记忆，不属于安装器所有。
 
 ### 运行证据脚本（可选）
 

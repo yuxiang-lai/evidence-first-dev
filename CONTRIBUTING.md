@@ -36,6 +36,8 @@ node scripts/validate.done.test.mjs
 node scripts/run-evidence.test.mjs
 node scripts/fixture-smoke.test.mjs
 node scripts/portable-mode.test.mjs
+node scripts/doctor.test.mjs
+node scripts/install.test.mjs
 python <path-to-skill-creator>/scripts/quick_validate.py .
 ```
 

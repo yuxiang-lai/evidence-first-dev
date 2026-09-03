@@ -157,6 +157,19 @@ ID instead of guessing.
 
 ## Installation
 
+For the shortest path, read [INSTALL.md](INSTALL.md). Choose your AI tool and
+follow one integration path; the core Markdown workflow does not require
+Node.js or Python.
+
+| I use | Shortest path |
+| --- | --- |
+| Codex | Clone into `~/.codex/skills/evidence-first-dev` |
+| Cursor | Run `scripts/install.ps1 -Tool cursor`, or copy one `.mdc` file |
+| Claude Code | Put the directory under `.claude/skills/evidence-first-dev/` |
+| Trae or CodeBuddy | Import the generic adapter into project rules or Custom Agent settings |
+| Other tools | Copy the root `AGENTS.md` into the target project root |
+| No Git | Use `Download ZIP` on GitHub or Gitee |
+
 Codex:
 
 ```bash
@@ -172,8 +185,9 @@ git clone https://github.com/yuxiang-lai/evidence-first-dev `
 ```
 
 For Cursor, Claude Code, Windsurf, Cline, Roo Code, Copilot, Gemini CLI, and
-Aider, see [ADAPTERS.md](ADAPTERS.md). Adapters point to `SKILL.md`; they do not
-copy a second workflow.
+Aider, see [INSTALL.md](INSTALL.md) and [ADAPTERS.md](ADAPTERS.md). The root
+`AGENTS.md` and adapters are thin bridges; `SKILL.md` remains the detailed
+workflow source of truth.
 
 ## Optional Commands
 
@@ -188,18 +202,24 @@ node scripts/validate.mjs <project-root> <change-id>
 Without Node.js, do not run these commands. Use the Markdown templates and the
 manual checklist instead.
 
+The repository also provides optional `scripts/install.ps1` and
+`scripts/install.sh` for rule installation, plus `scripts/doctor.mjs` for an
+installation check when Node.js 18+ is available.
+
 ## Repository Layout
 
 ```text
 evidence-first-dev/
 |-- SKILL.md                 canonical workflow rules
+|-- AGENTS.md                generic rule bridge
+|-- INSTALL.md               tool-specific installation guide
 |-- README.md                Chinese documentation
 |-- README.en.md             English documentation
 |-- ADAPTERS.md              cross-tool integration
 |-- adapters/                thin tool bridges
 |-- references/              detailed workflow and evaluation rules
 |-- templates/               repository-as-memory templates
-|-- scripts/                 optional Node.js automation
+|-- scripts/                 optional automation and install/doctor helpers
 `-- fixtures/                bug, UI, contract, and resume examples
 ```
 

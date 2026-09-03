@@ -1,7 +1,14 @@
 # Evidence-First Development
 
 For any non-trivial coding change, read and follow the canonical workflow at
-`.ai/evidence-first-dev/SKILL.md` before planning or editing.
+the first path that exists:
+
+- `.ai/evidence-first-dev/SKILL.md`
+- `.cursor/evidence-first-dev/SKILL.md` (legacy installation path)
+- `SKILL.md` when this repository itself is the opened skill checkout
+
+If no canonical file is available, use the portable minimum below and do not
+silently invent a different workflow.
 
 Keep the process proportional:
 
@@ -14,6 +21,7 @@ Keep the process proportional:
   approval before production UI implementation.
 - Do not mark work complete from a plan, summary, or unverified command claim.
 
-This file is only a bridge. The root `SKILL.md` is the single source of truth;
+This file is only a bridge. The root `SKILL.md` is the detailed source of truth;
 do not duplicate or independently edit the workflow in this file. If the skill
-is stored elsewhere, replace the path above with the actual repository path.
+is stored elsewhere, add that path as the first existing canonical path rather
+than rewriting the workflow.

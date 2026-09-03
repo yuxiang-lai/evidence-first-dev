@@ -152,6 +152,18 @@ node <skill-path>/scripts/index.mjs resume <project-root>
 
 ## 安装
 
+希望快速接入时，直接阅读 [安装与接入](INSTALL.md)。按你的 AI 工具选择一条
+路径即可，核心 Markdown 流程不要求 Node.js 或 Python。
+
+| 我使用 | 最短路径 |
+| --- | --- |
+| Codex | 克隆到 `~/.codex/skills/evidence-first-dev` |
+| Cursor | 运行 `scripts/install.ps1 -Tool cursor`，或复制一个 `.mdc` |
+| Claude Code | 放入 `.claude/skills/evidence-first-dev/` |
+| Trae、CodeBuddy | 在项目规则或 Custom Agent 设置导入通用 adapter |
+| 其他工具 | 复制根目录 `AGENTS.md` 到目标项目根目录 |
+| 不使用 Git | 在 GitHub/Gitee 点击 `Download ZIP` |
+
 Codex（GitHub）：
 
 ```bash
@@ -173,8 +185,8 @@ git clone https://gitee.com/yuxiang-lai/evidence-first-dev `
   "$HOME\.codex\skills\evidence-first-dev"
 ```
 
-其他 AI 工具的接入方式见 [ADAPTERS.md](ADAPTERS.md)。适配器只负责引导工具
-读取唯一规范源 `SKILL.md`，不会复制第二份流程。
+其他 AI 工具的接入方式见 [INSTALL.md](INSTALL.md) 和 [ADAPTERS.md](ADAPTERS.md)。
+根目录 `AGENTS.md` 和适配器只提供轻量桥接；完整流程仍以 `SKILL.md` 为规范源。
 
 不安装 Node.js 也可以完整使用 Markdown 流程。安装 Node.js 18 或更高版本后，
 可以额外启用初始化、恢复索引同步、结构校验和机器证据采集；skill 本身没有
@@ -191,6 +203,29 @@ git clone https://gitee.com/yuxiang-lai/evidence-first-dev `
 目标项目的技术栈要求；不建议为了使用 C、C++、Java、Go、Rust 或 Python 项目
 而额外安装目标语言之外的运行时。
 
+### 安装器与自检
+
+从已下载的 skill 仓库根目录运行。安装器只创建或复制规则入口，不安装依赖、
+不修改目标项目代码，也不会创建 change ledger：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -Tool cursor -ProjectRoot C:\path\to\your-project
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
+  -Tool generic -ProjectRoot C:\path\to\your-project
+```
+
+```bash
+sh scripts/install.sh cursor /path/to/your-project
+sh scripts/install.sh generic /path/to/your-project
+```
+
+有 Node.js 18+ 时，可以检查安装入口：
+
+```text
+node scripts/doctor.mjs <project-root>
+```
+
 ## 常用命令
 
 ```text
@@ -206,11 +241,13 @@ node scripts/validate.mjs <project-root> <change-id>
 ```text
 evidence-first-dev/
 |-- SKILL.md                 唯一规范源
+|-- AGENTS.md                通用规则桥接入口
+|-- INSTALL.md               按工具分流的安装指南
 |-- ADAPTERS.md              跨工具接入说明
 |-- adapters/                轻量规则桥接模板
 |-- references/              详细流程、审查和评估
 |-- templates/               环境即记忆的文档模板
-|-- scripts/                 可选的 Node.js 恢复、证据和校验脚本
+|-- scripts/                 可选自动化和安装/自检脚本
 `-- fixtures/                bug、UI、合约和恢复演练样本
 ```
 
@@ -231,6 +268,8 @@ node scripts/validate.done.test.mjs
 node scripts/run-evidence.test.mjs
 node scripts/fixture-smoke.test.mjs
 node scripts/portable-mode.test.mjs
+node scripts/doctor.test.mjs
+node scripts/install.test.mjs
 python <path-to-skill-creator>/scripts/quick_validate.py .
 ```
 

@@ -5,7 +5,14 @@ alwaysApply: true
 ---
 
 For a non-trivial coding change, read and follow the canonical workflow at
-`.cursor/evidence-first-dev/SKILL.md` before planning or editing.
+the first path that exists:
+
+- `.ai/evidence-first-dev/SKILL.md`
+- `.cursor/evidence-first-dev/SKILL.md` (legacy installation path)
+- `SKILL.md` when this repository itself is the opened skill checkout
+
+If no canonical file is available, the rules below are the portable minimum;
+do not silently invent a different workflow.
 
 Keep the process proportional:
 
@@ -18,5 +25,5 @@ Keep the process proportional:
   approval before production UI implementation.
 - Do not mark work complete from a plan, summary, or unverified command claim.
 
-The root `SKILL.md` is the only source of workflow rules. Do not create a
-second copy of its instructions in Cursor rules.
+The root `SKILL.md` is the detailed source of workflow rules. Do not create a
+second independent workflow in Cursor rules.
