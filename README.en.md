@@ -69,12 +69,30 @@ dependency growth.
 
 ### 5. TDD and reproduction-first debugging
 
-For new behavior, write the smallest failing test before implementation when
-the project can support it. For bugs, reproduce first, list falsifiable root
-cause hypotheses, change one variable at a time, and add a regression test over
-the original failure path.
+TDD does not mean writing a large test suite before any code. It means defining
+one expected behavior with the smallest useful test, then following a short,
+observable feedback loop:
 
-This replaces guess-driven edits with a controlled feedback loop.
+1. **Red**: write a test that fails because the behavior is missing, and confirm
+   that it fails for the intended reason.
+2. **Green**: write only the minimum implementation needed to pass that test.
+3. **Refactor**: remove duplication and improve structure while the test stays
+   green.
+4. **Verify**: run the focused test first, then broader checks proportional to
+   the change risk.
+
+Tests should describe user- or system-observable behavior instead of freezing
+an internal implementation. For a bug, a stable reproduction takes the place
+of the initial Red step: form falsifiable root-cause hypotheses, fix the shared
+cause, and preserve the original failure path as a regression test.
+
+Do not apply TDD mechanically. Documentation, subjective visual review,
+one-time configuration, and genuinely tiny low-risk changes may be better
+served by a small executable acceptance check or an honest manual observation
+than by introducing a test framework.
+
+This replaces guess-driven edits with a controlled feedback loop in which each
+step can show why the change was made and whether it worked.
 
 ### 6. Prototype UI before production UI
 
