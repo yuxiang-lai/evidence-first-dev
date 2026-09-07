@@ -30,6 +30,8 @@ jobs:
           node --check scripts/run-evidence.mjs
           node --check scripts/validate.mjs
           node --check scripts/doctor.mjs
+          node --check scripts/build-skill-package.mjs
+          node --check scripts/distribution.test.mjs
           node --check scripts/retention.test.mjs
 
       - name: Run behavior tests
@@ -42,3 +44,5 @@ jobs:
           node scripts/doctor.test.mjs
           node scripts/install.test.mjs
           node scripts/retention.test.mjs
+          node scripts/distribution.test.mjs
+          node scripts/build-skill-package.mjs --check

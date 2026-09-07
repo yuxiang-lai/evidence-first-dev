@@ -1,0 +1,12 @@
+{
+  "name": "evidence-first-dev",
+  "version": "1.0.0",
+  "description": "First-principles, repository-backed workflow for resumable and verifiable software changes.",
+  "author": {
+    "name": "yuxiang-lai",
+    "url": "https://github.com/yuxiang-lai"
+  },
+  "homepage": "https://github.com/yuxiang-lai/evidence-first-dev",
+  "repository": "https://github.com/yuxiang-lai/evidence-first-dev",
+  "license": "MIT"
+}

@@ -1,15 +1,17 @@
 ---
 description: Evidence-first, resumable workflow for non-trivial coding changes
 globs:
-alwaysApply: true
+alwaysApply: false
 ---
 
 For a non-trivial coding change, read and follow the canonical workflow at
 the first path that exists:
 
 - `.ai/evidence-first-dev/SKILL.md`
+- `.cursor/skills/evidence-first-dev/SKILL.md`
+- `.agents/skills/evidence-first-dev/SKILL.md`
 - `.cursor/evidence-first-dev/SKILL.md` (legacy installation path)
-- `SKILL.md` when this repository itself is the opened skill checkout
+- `skills/evidence-first-dev/SKILL.md` when this repository is the opened checkout
 
 If no canonical file is available, the rules below are the portable minimum;
 do not silently invent a different workflow.
@@ -25,5 +27,5 @@ Keep the process proportional:
   approval before production UI implementation.
 - Do not mark work complete from a plan, summary, or unverified command claim.
 
-The root `SKILL.md` is the detailed source of workflow rules. Do not create a
+The published `skills/evidence-first-dev/SKILL.md` is the detailed workflow. Do not create a
 second independent workflow in Cursor rules.

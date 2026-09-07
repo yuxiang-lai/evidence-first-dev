@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("cursor", "generic", "claude", "codex")]
+  [ValidateSet("cursor", "generic", "claude", "codex", "opencode")]
   [string]$Tool,
 
   [string]$ProjectRoot = (Get-Location).Path,
@@ -13,6 +13,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $skillRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$publishedRoot = Join-Path $skillRoot "skills\evidence-first-dev"
 $project = (Resolve-Path -LiteralPath $ProjectRoot).Path
 $skillRootFull = [System.IO.Path]::GetFullPath($skillRoot).TrimEnd([char]92, [char]47)
 $projectFull = [System.IO.Path]::GetFullPath($project).TrimEnd([char]92, [char]47)
@@ -64,7 +65,7 @@ function Copy-Payload([string]$Destination, [switch]$AllowExisting) {
   New-Item -ItemType Directory -Force -Path $Destination | Out-Null
   foreach ($entry in $payloadEntries) {
     $relative = Normalize-PayloadEntry $entry
-    $source = Join-Path $skillRoot $relative
+    $source = Join-Path $publishedRoot $relative
     $target = Join-Path $Destination $relative
     if (Test-Path -LiteralPath $source -PathType Container) {
       New-Item -ItemType Directory -Force -Path $target | Out-Null
@@ -78,14 +79,14 @@ function Copy-Payload([string]$Destination, [switch]$AllowExisting) {
 switch ($Tool) {
   "cursor" {
     if ($Mode -eq "full") {
-      Assert-DestinationAvailable (Join-Path $project ".ai\evidence-first-dev")
-      Assert-DestinationAvailable (Join-Path $project ".cursor\rules\evidence-first-dev.mdc")
-      Copy-Payload (Join-Path $project ".ai\evidence-first-dev")
+      Copy-Payload (Join-Path $project ".cursor\skills\evidence-first-dev")
+      Write-Output "install PASS: Cursor native skill installed in $project"
+    } else {
+      Copy-Safely `
+        (Join-Path $skillRoot "adapters\cursor\evidence-first-dev.mdc") `
+        (Join-Path $project ".cursor\rules\evidence-first-dev.mdc")
+      Write-Output "install PASS: Cursor compatibility bridge installed in $project"
     }
-    Copy-Safely `
-      (Join-Path $skillRoot "adapters\cursor\evidence-first-dev.mdc") `
-      (Join-Path $project ".cursor\rules\evidence-first-dev.mdc")
-    Write-Output "install PASS: Cursor $Mode installation completed in $project"
   }
   "generic" {
     if ($Mode -eq "full") {
@@ -112,5 +113,13 @@ switch ($Tool) {
     }
     Copy-Payload $project -AllowExisting
     Write-Output "install PASS: Codex full installation completed in $project"
+  }
+  "opencode" {
+    if ($Mode -eq "bridge") {
+      Stop-Install "OpenCode uses a native skill; use -Mode full"
+    }
+    $destination = Join-Path $project ".opencode\skills\evidence-first-dev"
+    Copy-Payload $destination
+    Write-Output "install PASS: OpenCode native skill installed in $project"
   }
 }

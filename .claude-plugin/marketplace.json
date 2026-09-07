@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "evidence-first-dev",
+  "description": "First-principles, repository-backed workflow for resumable and verifiable software changes.",
+  "owner": {
+    "name": "yuxiang-lai",
+    "url": "https://github.com/yuxiang-lai"
+  },
+  "plugins": [
+    {
+      "name": "evidence-first-dev",
+      "description": "Make the smallest correct change and prove it with durable repository evidence.",
+      "source": "./skills/evidence-first-dev",
+      "category": "productivity"
+    }
+  ]
+}

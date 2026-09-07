@@ -1,6 +1,7 @@
 # Evidence-First Development
 
-Use the full workflow in `SKILL.md` when this repository is available. This
+Use the full workflow in `skills/evidence-first-dev/SKILL.md` when this
+repository is available. This
 file is also a standalone bridge for tools that load `AGENTS.md` but do not
 support directory-based skills.
 

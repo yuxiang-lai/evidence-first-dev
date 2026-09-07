@@ -4,6 +4,8 @@
 
 [中文](README.md) | English
 
+[Installation](INSTALL.md) | [Installable Skill](skills/evidence-first-dev/SKILL.md)
+
 Evidence-First Dev is not a process that makes AI write more documents. It
 helps an agent understand the real problem before coding, control complexity
 while coding, prove the result with actual evidence, and continue work after a
@@ -12,8 +14,9 @@ new session or a tool change.
 The workflow is plain Markdown and does not require Node.js, Python, or the
 language used by the target project. Optional Node.js 18+ scripts automate
 initialization, recovery-index synchronization, structural validation, and
-machine evidence capture. The same protocol can be connected to Codex, Cursor,
-Claude Code, Windsurf, Cline, Roo Code, GitHub Copilot, Gemini CLI, and Aider.
+machine evidence capture. The same Agent Skill works natively with Codex,
+Claude Code, Cursor, and OpenCode, and can be bridged into Windsurf, Cline, Roo
+Code, GitHub Copilot, Gemini CLI, and Aider.
 
 ## Core Ideas
 
@@ -168,54 +171,24 @@ see [Memory Retention And Compaction](references/retention.md).
 
 ## Installation
 
-For the shortest path, read [INSTALL.md](INSTALL.md). Choose your AI tool and
-follow one integration path; the core Markdown workflow does not require
-Node.js or Python.
-
-| I use | Shortest path |
-| --- | --- |
-| Codex | Use the installer to copy the curated payload into `~/.codex/skills/evidence-first-dev` |
-| Cursor | Run `scripts/install.ps1 -Tool cursor -ProjectRoot <project-root>`, or copy one `.mdc` file |
-| Claude Code | Put the directory under `.claude/skills/evidence-first-dev/` |
-| Trae or CodeBuddy | Import the generic adapter into project rules or Custom Agent settings |
-| Other tools | Copy the root `AGENTS.md` into the target project root |
-| No Git | Use `Download ZIP` on GitHub or Gitee |
-
-Codex user installation (runtime payload only):
-
-```powershell
-New-Item -ItemType Directory -Force "$HOME\.codex\skills\evidence-first-dev" | Out-Null
-powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
-  -Tool codex -ProjectRoot "$HOME\.codex\skills\evidence-first-dev"
-```
-
-macOS/Linux:
+Codex, Claude Code, Cursor, and OpenCode share one interactive install command:
 
 ```bash
-mkdir -p ~/.codex/skills/evidence-first-dev
-sh scripts/install.sh codex ~/.codex/skills/evidence-first-dev
+npx skills add yuxiang-lai/evidence-first-dev
 ```
 
-For contributing or editing the skill source, use a full checkout instead:
+`npx` is only an optional installer. The installed skill is plain Markdown; it
+adds no npm dependency and does not require Node.js while working in C, Java,
+Go, Rust, or any other stack.
 
-```bash
-git clone https://github.com/yuxiang-lai/evidence-first-dev.git \
-  ~/src/evidence-first-dev
-```
+No-Node native paths are also available: Codex and Claude Code marketplaces,
+Cursor's **Remote Rule (GitHub)** flow, and direct OpenCode skill placement.
+See [INSTALL.md](INSTALL.md) for exact commands and [ADAPTERS.md](ADAPTERS.md)
+for discovery paths.
 
-Windows PowerShell:
-
-```powershell
-git clone https://github.com/yuxiang-lai/evidence-first-dev `
-  "$HOME\.codex\skills\evidence-first-dev"
-```
-
-For Cursor, Claude Code, Windsurf, Cline, Roo Code, Copilot, Gemini CLI, and
-Aider, see [INSTALL.md](INSTALL.md) and [ADAPTERS.md](ADAPTERS.md). The root
-`AGENTS.md` and adapters are thin bridges; `SKILL.md` remains the detailed
-workflow source of truth. The installer reads `scripts/payload.txt`, so user
-installation does not copy README files, fixtures, tests, adapters, or installer
-source into the target skill directory.
+Users receive only `skills/evidence-first-dev/`. README files, `AGENTS.md`,
+fixtures, tests, adapters, and contributor files are excluded. CI checks that
+this curated package exactly matches `scripts/payload.txt`.
 
 ## Optional Commands
 
@@ -238,7 +211,11 @@ installation check when Node.js 18+ is available.
 
 ```text
 evidence-first-dev/
-|-- SKILL.md                 canonical workflow rules
+|-- SKILL.source.md          canonical source, excluded from discovery
+|-- skills/evidence-first-dev/ curated user package
+|-- .codex-plugin/           Codex plugin manifest
+|-- .claude-plugin/          Claude Code plugin and marketplace
+|-- .agents/plugins/         Codex marketplace
 |-- AGENTS.md                generic rule bridge
 |-- INSTALL.md               tool-specific installation guide
 |-- README.md                Chinese documentation
@@ -247,7 +224,7 @@ evidence-first-dev/
 |-- adapters/                thin tool bridges
 |-- references/              detailed workflow and evaluation rules
 |-- templates/               repository-as-memory templates
-|-- scripts/                 optional automation and install/doctor helpers
+|-- scripts/                 optional automation, packaging, and installers
 `-- fixtures/                bug, UI, contract, and resume examples
 ```
 

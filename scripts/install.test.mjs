@@ -12,8 +12,9 @@ const cursorProject = path.join(root, "cursor project");
 const genericProject = path.join(root, "generic project");
 const claudeProject = path.join(root, "claude project");
 const codexProject = path.join(root, "codex skill");
+const opencodeProject = path.join(root, "opencode project");
 const bridgeProject = path.join(root, "bridge project");
-for (const project of [cursorProject, genericProject, claudeProject, codexProject, bridgeProject]) {
+for (const project of [cursorProject, genericProject, claudeProject, codexProject, opencodeProject, bridgeProject]) {
   fs.mkdirSync(project, { recursive: true });
 }
 
@@ -48,7 +49,7 @@ try {
     .filter((entry) => entry && !entry.startsWith("#"));
   assert.ok(payloadEntries.includes("SKILL.md"));
   for (const entry of payloadEntries) {
-    assert.ok(fs.existsSync(path.join(skillRoot, entry)), `payload entry must exist: ${entry}`);
+    assert.ok(fs.existsSync(path.join(skillRoot, "skills", "evidence-first-dev", entry)), `published payload entry must exist: ${entry}`);
     assert.ok(!path.isAbsolute(entry) && !/(^|[\\/])\.\.($|[\\/])/.test(entry), `payload entry must stay inside the skill payload: ${entry}`);
   }
   for (const sourceOnly of ["AGENTS.md", "README.md", "README.en.md", "fixtures", "adapters", "scripts/install.ps1", "scripts/install.sh"]) {
@@ -59,21 +60,27 @@ try {
   runInstall("generic", genericProject);
   runInstall("claude", claudeProject);
   runInstall("codex", codexProject);
+  runInstall("opencode", opencodeProject);
 
-  assert.ok(fs.existsSync(path.join(cursorProject, ".cursor", "rules", "evidence-first-dev.mdc")));
+  assert.ok(fs.existsSync(path.join(cursorProject, ".cursor", "skills", "evidence-first-dev", "SKILL.md")));
   assert.ok(fs.existsSync(path.join(genericProject, "AGENTS.md")));
   assert.ok(fs.existsSync(path.join(claudeProject, ".claude", "skills", "evidence-first-dev", "SKILL.md")));
   assert.ok(fs.existsSync(path.join(codexProject, "SKILL.md")));
-  for (const unwanted of ["README.md", "README.en.md", "AGENTS.md", "fixtures", "adapters", "install.ps1", "install.sh"]) {
+  assert.ok(fs.existsSync(path.join(opencodeProject, ".opencode", "skills", "evidence-first-dev", "SKILL.md")));
+  for (const unwanted of ["README.md", "README.en.md", "AGENTS.md", "fixtures", "adapters", "scripts/install.ps1", "scripts/install.sh"]) {
     assert.ok(!fs.existsSync(path.join(claudeProject, ".claude", "skills", "evidence-first-dev", unwanted)), `${unwanted} must not be installed in Claude payload`);
   }
-  for (const unwanted of ["README.md", "README.en.md", "AGENTS.md", "fixtures", "adapters", "install.ps1", "install.sh"]) {
+  for (const unwanted of ["README.md", "README.en.md", "AGENTS.md", "fixtures", "adapters", "scripts/install.ps1", "scripts/install.sh"]) {
     assert.ok(!fs.existsSync(path.join(codexProject, unwanted)), `${unwanted} must not be installed in Codex payload`);
   }
-  for (const project of [cursorProject, genericProject]) {
-    const payload = path.join(project, ".ai", "evidence-first-dev");
+  for (const [project, relative] of [
+    [cursorProject, [".cursor", "skills", "evidence-first-dev"]],
+    [genericProject, [".ai", "evidence-first-dev"]],
+    [opencodeProject, [".opencode", "skills", "evidence-first-dev"]],
+  ]) {
+    const payload = path.join(project, ...relative);
     assert.ok(fs.existsSync(path.join(payload, "SKILL.md")));
-    for (const unwanted of ["README.md", "README.en.md", "AGENTS.md", "fixtures", "adapters", "install.ps1", "install.sh"]) {
+    for (const unwanted of ["README.md", "README.en.md", "AGENTS.md", "fixtures", "adapters", "scripts/install.ps1", "scripts/install.sh"]) {
       assert.ok(!fs.existsSync(path.join(payload, unwanted)), `${unwanted} must not be installed`);
     }
   }

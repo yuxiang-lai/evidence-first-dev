@@ -12,6 +12,7 @@ case "${3:-}" in
   *) printf 'install FAIL: mode must be full or bridge, followed by --force when needed\n' >&2; exit 1 ;;
 esac
 skill_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+published_root="$skill_root/skills/evidence-first-dev"
 project=$(CDPATH= cd -- "$project" && pwd)
 payload_manifest="$skill_root/scripts/payload.txt"
 
@@ -63,7 +64,7 @@ copy_payload() {
         fail "payload entry must stay inside the skill payload: $entry"
         ;;
     esac
-    source="$skill_root/$entry"
+    source="$published_root/$entry"
     target="$destination/${entry%/}"
     if [ -d "$source" ]; then
       mkdir -p "$target"
@@ -77,14 +78,14 @@ copy_payload() {
 case "$tool" in
   cursor)
     if [ "$mode" = "full" ]; then
-      assert_destination_available "$project/.ai/evidence-first-dev"
-      assert_destination_available "$project/.cursor/rules/evidence-first-dev.mdc"
-      copy_payload "$project/.ai/evidence-first-dev"
+      copy_payload "$project/.cursor/skills/evidence-first-dev"
+      printf 'install PASS: Cursor native skill installed in %s\n' "$project"
+    else
+      copy_safely \
+        "$skill_root/adapters/cursor/evidence-first-dev.mdc" \
+        "$project/.cursor/rules/evidence-first-dev.mdc"
+      printf 'install PASS: Cursor compatibility bridge installed in %s\n' "$project"
     fi
-    copy_safely \
-      "$skill_root/adapters/cursor/evidence-first-dev.mdc" \
-      "$project/.cursor/rules/evidence-first-dev.mdc"
-    printf 'install PASS: Cursor %s installation completed in %s\n' "$mode" "$project"
     ;;
   generic)
     if [ "$mode" = "full" ]; then
@@ -108,7 +109,12 @@ case "$tool" in
     copy_payload "$project" yes
     printf 'install PASS: Codex full installation completed in %s\n' "$project"
     ;;
+  opencode)
+    [ "$mode" = "full" ] || fail "OpenCode uses a native skill; use full mode"
+    copy_payload "$project/.opencode/skills/evidence-first-dev"
+    printf 'install PASS: OpenCode native skill installed in %s\n' "$project"
+    ;;
   *)
-    fail "usage: sh scripts/install.sh <cursor|generic|claude|codex> [project-root] [full|bridge] [--force]"
+    fail "usage: sh scripts/install.sh <cursor|generic|claude|codex|opencode> [project-root] [full|bridge] [--force]"
     ;;
 esac

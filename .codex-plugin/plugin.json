@@ -1,0 +1,37 @@
+{
+  "name": "evidence-first-dev",
+  "version": "1.0.0",
+  "description": "First-principles, repository-backed workflow for resumable and verifiable software changes.",
+  "author": {
+    "name": "yuxiang-lai",
+    "url": "https://github.com/yuxiang-lai"
+  },
+  "homepage": "https://github.com/yuxiang-lai/evidence-first-dev",
+  "repository": "https://github.com/yuxiang-lai/evidence-first-dev",
+  "license": "MIT",
+  "keywords": [
+    "first-principles",
+    "repository-memory",
+    "tdd",
+    "evidence",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Evidence-First Dev",
+    "shortDescription": "Verified, resumable software delivery",
+    "longDescription": "Reduce requests to real outcomes, make the smallest correct change, preserve progress in the repository, and close with evidence.",
+    "developerName": "yuxiang-lai",
+    "category": "Productivity",
+    "capabilities": [
+      "Instructions"
+    ],
+    "websiteURL": "https://github.com/yuxiang-lai/evidence-first-dev",
+    "defaultPrompt": [
+      "Use Evidence-First Dev for this coding task.",
+      "Resume the unfinished change from repository memory.",
+      "Review this change against its acceptance evidence."
+    ],
+    "brandColor": "#146B5D"
+  }
+}

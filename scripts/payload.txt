@@ -1,5 +1,8 @@
 # Runtime payload copied into a target project's canonical skill directory.
 SKILL.md
+LICENSE
+.claude-plugin/plugin.json
+agents/openai.yaml
 references/
 templates/
 scripts/doctor.mjs

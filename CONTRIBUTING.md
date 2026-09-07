@@ -6,7 +6,7 @@ rules that do not protect a real risk.
 
 ## Before Opening A Change
 
-- Read `SKILL.md` and the relevant file under `references/`.
+- Read `SKILL.source.md` and the relevant file under `references/`.
 - State the observable problem and the smallest useful outcome.
 - Check whether an existing rule or script already covers the behavior.
 - Keep new instructions scoped to the decisions they improve.
@@ -29,6 +29,14 @@ rules that do not protect a real risk.
 
 ## Verification
 
+Regenerate the curated user package after changing `SKILL.source.md`, `agents/`,
+`references/`, `templates/`, or a runtime script:
+
+```text
+node scripts/build-skill-package.mjs
+node scripts/build-skill-package.mjs --check
+```
+
 Run these commands from the repository root:
 
 ```text
@@ -40,7 +48,9 @@ node scripts/portable-mode.test.mjs
 node scripts/doctor.test.mjs
 node scripts/install.test.mjs
 node scripts/retention.test.mjs
-python <path-to-skill-creator>/scripts/quick_validate.py .
+node scripts/distribution.test.mjs
+python <path-to-skill-creator>/scripts/quick_validate.py skills/evidence-first-dev
+python <path-to-plugin-creator>/scripts/validate_plugin.py .
 ```
 
 When changing a validator rule or evidence schema, add or update a focused

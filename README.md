@@ -4,15 +4,17 @@
 
 中文 | [English](README.en.md)
 
+[安装指南](INSTALL.md) | [可安装 Skill](skills/evidence-first-dev/SKILL.md) | [Gitee 镜像](https://gitee.com/yuxiang-lai/evidence-first-dev)
+
 ## 中文
 
 Evidence-First Dev 不是一套让 AI “多写文档”的流程，而是让 AI 在写代码前
 先把问题想清楚，在写代码时控制复杂度，在结束任务前拿出真实证据，并且让
 下一次会话能够接着做。
 
-它以 Codex skill 形式提供，但核心流程使用普通 Markdown，不依赖 Node.js、
-Python 或目标项目的开发语言；可选的 Node.js 脚本只负责自动化护栏。它也可以
-通过项目规则接入 Cursor、Claude Code、Windsurf、
+它以 Agent Skill 形式提供，但核心流程使用普通 Markdown，不依赖 Node.js、
+Python 或目标项目的开发语言；可选的 Node.js 脚本只负责自动化护栏。它可以
+原生接入 Codex、Claude Code、Cursor、OpenCode，也可通过项目规则接入 Windsurf、
 Cline、Roo Code、GitHub Copilot、Gemini CLI 和 Aider。
 
 ## 核心思想
@@ -162,58 +164,24 @@ node <skill-path>/scripts/index.mjs resume <project-root>
 
 ## 安装
 
-希望快速接入时，直接阅读 [安装与接入](INSTALL.md)。按你的 AI 工具选择一条
-路径即可，核心 Markdown 流程不要求 Node.js 或 Python。
-
-| 我使用 | 最短路径 |
-| --- | --- |
-| Codex | 用安装脚本复制精选 payload 到 `~/.codex/skills/evidence-first-dev` |
-| Cursor | 运行 `scripts/install.ps1 -Tool cursor -ProjectRoot <project-root>`，或复制一个 `.mdc` |
-| Claude Code | 放入 `.claude/skills/evidence-first-dev/` |
-| Trae、CodeBuddy | 在项目规则或 Custom Agent 设置导入通用 adapter |
-| 其他工具 | 复制根目录 `AGENTS.md` 到目标项目根目录 |
-| 不使用 Git | 在 GitHub/Gitee 点击 `Download ZIP` |
-
-Codex 用户安装（只复制运行所需文件）：
-
-```powershell
-New-Item -ItemType Directory -Force "$HOME\.codex\skills\evidence-first-dev" | Out-Null
-powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
-  -Tool codex -ProjectRoot "$HOME\.codex\skills\evidence-first-dev"
-```
-
-macOS/Linux：
+Codex、Claude Code、Cursor 和 OpenCode 可以用同一条命令安装：
 
 ```bash
-mkdir -p ~/.codex/skills/evidence-first-dev
-sh scripts/install.sh codex ~/.codex/skills/evidence-first-dev
+npx skills add yuxiang-lai/evidence-first-dev
 ```
 
-贡献者或需要修改 skill 源码时，再使用完整 checkout：
+它会让你选择工具与项目级/全局范围。`npx` 只负责安装；安装后的 skill 是普通
+Markdown，不给目标项目添加 npm 依赖，也不要求 C、Java、Go、Rust 等项目运行
+Node.js。
 
-```bash
-git clone https://github.com/yuxiang-lai/evidence-first-dev.git \
-  ~/src/evidence-first-dev
-```
+不使用 Node.js 也有平台原生入口：Codex 和 Claude Code 使用 marketplace 命令，
+Cursor 可从 **Remote Rule (GitHub)** 导入，OpenCode 可直接复制到
+`.opencode/skills/`。完整命令见 [安装指南](INSTALL.md)，发现机制见
+[跨工具接入](ADAPTERS.md)。
 
-Gitee 镜像：
-
-```bash
-git clone https://gitee.com/yuxiang-lai/evidence-first-dev.git \
-  ~/src/evidence-first-dev
-```
-
-Windows PowerShell：
-
-```powershell
-git clone https://gitee.com/yuxiang-lai/evidence-first-dev `
-  "$HOME\src\evidence-first-dev"
-```
-
-其他 AI 工具的接入方式见 [INSTALL.md](INSTALL.md) 和 [ADAPTERS.md](ADAPTERS.md)。
-根目录 `AGENTS.md` 和适配器只提供轻量桥接；完整流程仍以 `SKILL.md` 为规范源。
-安装脚本使用 `scripts/payload.txt`，不会把 README、fixtures、测试、适配器和开发用
-安装器复制进目标 skill 目录。
+用户实际安装的是精选发布包 `skills/evidence-first-dev/`，不包含 README、
+`AGENTS.md`、fixtures、测试、适配器和贡献文档。发布包由
+`scripts/payload.txt` 生成并由 CI 做逐文件防漂移校验。
 
 不安装 Node.js 也可以完整使用 Markdown 流程。安装 Node.js 18 或更高版本后，
 可以额外启用初始化、恢复索引同步、结构校验和机器证据采集；skill 本身没有
@@ -230,29 +198,6 @@ git clone https://gitee.com/yuxiang-lai/evidence-first-dev `
 目标项目的技术栈要求；不建议为了使用 C、C++、Java、Go、Rust 或 Python 项目
 而额外安装目标语言之外的运行时。
 
-### 安装器与自检
-
-从已下载的 skill 仓库根目录运行。安装器只创建或复制规则入口，不安装依赖、
-不修改目标项目代码，也不会创建 change ledger：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
-  -Tool cursor -ProjectRoot C:\path\to\your-project
-powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1 `
-  -Tool generic -ProjectRoot C:\path\to\your-project
-```
-
-```bash
-sh scripts/install.sh cursor /path/to/your-project
-sh scripts/install.sh generic /path/to/your-project
-```
-
-有 Node.js 18+ 时，可以检查安装入口：
-
-```text
-node scripts/doctor.mjs <project-root>
-```
-
 ## 常用命令
 
 ```text
@@ -267,18 +212,22 @@ node scripts/validate.mjs <project-root> <change-id>
 
 ```text
 evidence-first-dev/
-|-- SKILL.md                 唯一规范源
+|-- SKILL.source.md          不参与安装发现的工作流维护源
+|-- skills/evidence-first-dev/ 精选用户发布包
+|-- .codex-plugin/           Codex 插件清单
+|-- .claude-plugin/          Claude Code 插件与 marketplace
+|-- .agents/plugins/         Codex marketplace
 |-- AGENTS.md                通用规则桥接入口
 |-- INSTALL.md               按工具分流的安装指南
 |-- ADAPTERS.md              跨工具接入说明
 |-- adapters/                轻量规则桥接模板
 |-- references/              详细流程、审查和评估
 |-- templates/               环境即记忆的文档模板
-|-- scripts/                 可选自动化和安装/自检脚本
+|-- scripts/                 可选自动化、打包、安装与自检
 `-- fixtures/                bug、UI、合约和恢复演练样本
 ```
 
-没有 Node.js 时重点使用 `SKILL.md`、`references/portable-mode.md`、
+没有 Node.js 时重点使用发布包中的 `SKILL.md`、`references/portable-mode.md`、
 `templates/` 和项目中的 `docs/`。脚本目录可以完全不执行。
 
 ## 适用边界
